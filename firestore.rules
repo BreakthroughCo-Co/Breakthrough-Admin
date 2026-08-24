@@ -1,0 +1,199 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny catch-all safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ==========================================
+    // Core Helper Functions & Role Evaluators
+    // ==========================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function getUserRole() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? getUserData().role
+        : null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        getUserRole() == 'ADMIN' ||
+        getUserRole() == 'admin' ||
+        request.auth.token.role == 'ADMIN' ||
+        request.auth.token.role == 'admin'
+      );
+    }
+
+    function isPractitioner() {
+      return isSignedIn() && (
+        getUserRole() == 'PRACTITIONER' ||
+        getUserRole() == 'practitioner' ||
+        isAdmin()
+      );
+    }
+
+    function isSupportCoordinator() {
+      return isSignedIn() && (
+        getUserRole() == 'SUPPORT_COORDINATOR' ||
+        getUserRole() == 'support_coordinator' ||
+        isAdmin()
+      );
+    }
+
+    // ==========================================
+    // 1. System Health & Connection Test Probes
+    // ==========================================
+    match /system/{docId} {
+      allow get: if true; // Public read for connection health probe
+      allow write: if false;
+    }
+
+    // ==========================================
+    // 2. User Accounts & Google Keep Notes
+    // ==========================================
+    match /users/{userId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+
+      // Google Keep user-owned notes and checklists
+      match /keepNotes/{noteId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // ==========================================
+    // 3. Clinical Clients / NDIS Participants
+    // ==========================================
+    match /clients/{clientId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn();
+    }
+
+    // ==========================================
+    // 4. Clinical Case Notes
+    // ==========================================
+    match /caseNotes/{noteId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // ==========================================
+    // 5. NDIS Billing Claims
+    // ==========================================
+    match /billingClaims/{claimId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // ==========================================
+    // 6. Incidents & Safeguards Governance
+    // ==========================================
+    match /incidents/{incidentId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // ==========================================
+    // 7. Restrictive Practices Register
+    // ==========================================
+    match /restrictivePractices/{practiceId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // ==========================================
+    // 8. ABC Behaviour Logs
+    // ==========================================
+    match /abcLogs/{logId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // ==========================================
+    // 9. Behaviour Support Plans (BSP Documents)
+    // ==========================================
+    match /bspDocuments/{documentId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // ==========================================
+    // 10. CRM Leads & Intake Pipeline
+    // ==========================================
+    match /crmLeads/{leadId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    match /leads/{leadId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // ==========================================
+    // 11. CRM Tasks & Action Items
+    // ==========================================
+    match /crmTasks/{taskId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // ==========================================
+    // 12. HR Practitioners & Staff Roster
+    // ==========================================
+    match /practitioners/{practitionerId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // ==========================================
+    // 13. NDIS Price Guide / Support Items (Read-Only)
+    // ==========================================
+    match /supportItems/{code} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ==========================================
+    // 14. Audit Trail Ledger (Append-Only)
+    // ==========================================
+    match /auditLogs/{logId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if false; // Strict immutability
+    }
+
+    // ==========================================
+    // 15. Scheduled Shifts & Rostering
+    // ==========================================
+    match /scheduledShifts/{shiftId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // ==========================================
+    // Real-time Notifications & Alerts
+    // ==========================================
+    match /notifications/{notificationId} {
+      allow read, write: if isSignedIn();
+    }
+  }
+}

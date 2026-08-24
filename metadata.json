@@ -1,0 +1,6 @@
+{
+  "name": "Google Workspace Hub",
+  "description": "Enterprise Google Workspace Hub with direct OAuth integrations for Drive, Sheets, Docs, Slides, Calendar, Gmail, Meet Spaces, Forms, Keep, Picker, Contacts, Tasks, Chat, AI clinical intelligence, and NDIS workflows.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
