@@ -106,6 +106,7 @@ const OFFICIAL_2026_PRICE_GUIDE_PRESETS: NDISSupportItem[] = [
 
 export const BillingModule: React.FC = () => {
   const {
+    currentUser,
     billingClaims,
     supportItems,
     clients,
@@ -118,6 +119,9 @@ export const BillingModule: React.FC = () => {
     addNotification,
     setActiveTab: setStoreTab
   } = useManagementStore();
+
+  const isViewer = currentUser?.role === 'VIEWER';
+  const isAdmin = currentUser?.role === 'ADMIN';
   
   const [activeTab, setActiveTab] = useState<'CLAIMS' | 'PRICE_GUIDE' | 'CALCULATOR' | 'BURN_RATE'>('CLAIMS');
   const [selectedClient, setSelectedClient] = useState(clients[0]?.id || 'cli-101');
@@ -634,9 +638,9 @@ export const BillingModule: React.FC = () => {
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <button
             onClick={handleRunReconciliationAudit}
-            disabled={isReconciling}
+            disabled={isReconciling || isViewer}
             className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-lg flex items-center gap-1.5 border border-amber-500/40 transition-all shadow-sm disabled:opacity-50"
-            title="Perform automatic NDIS price cap validation & SLA breach audit across all claims"
+            title={isViewer ? "View-only access" : "Perform automatic NDIS price cap validation & SLA breach audit across all claims"}
           >
             <RefreshCw className={`w-3.5 h-3.5 text-amber-400 ${isReconciling ? 'animate-spin' : ''}`} />
             <span>{isReconciling ? 'Reconciling Ledger...' : 'Auto-Reconcile Ledger'}</span>
@@ -653,31 +657,35 @@ export const BillingModule: React.FC = () => {
 
           <button
             onClick={handleSyncToXeroMYOB}
-            disabled={isSyncingXero}
+            disabled={isSyncingXero || isViewer}
             className="px-3 py-1.5 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all shadow-sm border border-sky-500/30 disabled:opacity-50"
-            title="Sync Claims Directly with Xero / MYOB Cloud Accounts Receivable"
+            title={isViewer ? "View-only access" : "Sync Claims Directly with Xero / MYOB Cloud Accounts Receivable"}
           >
             <Sparkles className="w-3.5 h-3.5 text-sky-200" />
             <span>{isSyncingXero ? 'Syncing Xero/MYOB...' : 'Sync Xero / MYOB API'}</span>
           </button>
 
-          <button
-            onClick={() => setIsImportModalOpen(true)}
-            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-teal-300 font-semibold text-xs rounded-lg flex items-center gap-1.5 border border-slate-700 transition-all"
-            title="Import Price Guide Data"
-          >
-            <Upload className="w-3.5 h-3.5 text-teal-400" />
-            <span>Import Price Guide</span>
-          </button>
+          {!isViewer && (
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-teal-300 font-semibold text-xs rounded-lg flex items-center gap-1.5 border border-slate-700 transition-all"
+              title="Import Price Guide Data"
+            >
+              <Upload className="w-3.5 h-3.5 text-teal-400" />
+              <span>Import Price Guide</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => setIsProdaBatchModalOpen(true)}
-            className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all shadow-md border border-emerald-500/30"
-            title="Open Bulk PRODA XML Batch Generator Studio"
-          >
-            <FileCode className="w-3.5 h-3.5 text-emerald-200" />
-            <span>Bulk PRODA Claim Generator</span>
-          </button>
+          {!isViewer && (
+            <button
+              onClick={() => setIsProdaBatchModalOpen(true)}
+              className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all shadow-md border border-emerald-500/30"
+              title="Open Bulk PRODA XML Batch Generator Studio"
+            >
+              <FileCode className="w-3.5 h-3.5 text-emerald-200" />
+              <span>Bulk PRODA Claim Generator</span>
+            </button>
+          )}
 
           <button
             onClick={exportToCSV}
@@ -697,13 +705,15 @@ export const BillingModule: React.FC = () => {
             <span>Print PDF</span>
           </button>
 
-          <button
-            onClick={() => setIsAdding(true)}
-            className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg flex items-center gap-2 transition-all shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Claim</span>
-          </button>
+          {!isViewer && (
+            <button
+              onClick={() => setIsAdding(true)}
+              className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg flex items-center gap-2 transition-all shadow-sm"
+            >
+              <Plus className="w-4 h-4" />
+              <span>New Claim</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -824,13 +834,15 @@ export const BillingModule: React.FC = () => {
                         {claim.reconciliationError || 'Line item exceeds NDIS price cap limit ($214.41/hr).'}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => reconcileClaim(claim.id, 'Reconciled')}
-                      className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-300 text-[10px] font-bold rounded border border-emerald-500/30 shrink-0 transition-all"
-                    >
-                      Resolve
-                    </button>
+                    {!isViewer && (
+                      <button
+                        type="button"
+                        onClick={() => reconcileClaim(claim.id, 'Reconciled')}
+                        className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-300 text-[10px] font-bold rounded border border-emerald-500/30 shrink-0 transition-all"
+                      >
+                        Resolve
+                      </button>
+                    )}
                   </div>
                 ))}
 
@@ -849,13 +861,15 @@ export const BillingModule: React.FC = () => {
                         SLA Risk: Payment pending &gt; 25 days. Deadline: {claim.slaDeadline || '2026-03-01'}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => updateBillingStatus(claim.id, 'Paid')}
-                      className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-teal-300 text-[10px] font-bold rounded border border-teal-500/30 shrink-0 transition-all"
-                    >
-                      Mark Paid
-                    </button>
+                    {!isViewer && (
+                      <button
+                        type="button"
+                        onClick={() => updateBillingStatus(claim.id, 'Paid')}
+                        className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-teal-300 text-[10px] font-bold rounded border border-teal-500/30 shrink-0 transition-all"
+                      >
+                        Mark Paid
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -946,8 +960,11 @@ export const BillingModule: React.FC = () => {
                         <td className="py-3 px-4 text-right font-sans">
                           <select
                             value={claim.status}
+                            disabled={isViewer}
                             onChange={(e) => updateBillingStatus(claim.id, e.target.value as any)}
-                            className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-teal-400 font-bold cursor-pointer"
+                            className={`bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-teal-400 font-bold ${
+                              isViewer ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                            }`}
                           >
                             <option value="Pending">Pending</option>
                             <option value="Approved">Approved</option>
@@ -1253,30 +1270,32 @@ export const BillingModule: React.FC = () => {
                   </div>
                 )}
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!targetClient || !targetItem) return;
-                    addBillingClaim({
-                      clientId: targetClient.id,
-                      clientName: targetClient.name,
-                      ndisNumber: targetClient.ndisNumber,
-                      serviceDate: new Date().toISOString().slice(0, 10),
-                      ndisSupportItem: `${targetItem.code} - ${targetItem.name}`,
-                      supportItemCode: targetItem.code,
-                      hours: totalHours,
-                      unitRate: Math.round(effectiveRate * 100) / 100,
-                      totalAmount: Math.round(totalEstimatedClaim * 100) / 100,
-                      status: 'Approved',
-                      invoiceNumber: `INV-2026-${Math.floor(Math.random() * 9000 + 1000)}`,
-                    });
-                    setActiveTab('CLAIMS');
-                  }}
-                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm font-sans mt-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Log Calculated Claim Directly to PACE Ledger</span>
-                </button>
+                {!isViewer && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!targetClient || !targetItem) return;
+                      addBillingClaim({
+                        clientId: targetClient.id,
+                        clientName: targetClient.name,
+                        ndisNumber: targetClient.ndisNumber,
+                        serviceDate: new Date().toISOString().slice(0, 10),
+                        ndisSupportItem: `${targetItem.code} - ${targetItem.name}`,
+                        supportItemCode: targetItem.code,
+                        hours: totalHours,
+                        unitRate: Math.round(effectiveRate * 100) / 100,
+                        totalAmount: Math.round(totalEstimatedClaim * 100) / 100,
+                        status: 'Approved',
+                        invoiceNumber: `INV-2026-${Math.floor(Math.random() * 9000 + 1000)}`,
+                      });
+                      setActiveTab('CLAIMS');
+                    }}
+                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm font-sans mt-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Log Calculated Claim Directly to PACE Ledger</span>
+                  </button>
+                )}
               </div>
             );
           })()}

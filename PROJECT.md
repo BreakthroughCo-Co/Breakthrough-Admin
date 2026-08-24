@@ -43,11 +43,11 @@ Breakthrough OS is a Next.js 15 (React 19) + Firebase (Auth, Firestore) + Zustan
 |---|------|-------|-------------|--------|
 | M-TEST | E2E Testing Track | Test harness, runner, and Tiers 1-4 test cases; publish TEST_READY.md | none | DONE |
 | M1 | Phase 1: Firestore Persistence Layer | Typed services, security rules, store hydration, blueprint update | none | DONE |
-| M2 | Phase 2: Auth Guards & RBAC | SignInScreen, route guards, RBAC store sync, action gating, RBAC rules | M1 | IN_PROGRESS |
-| M3 | Phase 3: Real-Time & Offline Sync | onSnapshot listeners, persistent cache, OfflineDelta flush, connection status | M1, M2 | PLANNED |
-| M4 | Phase 4: AI Enhancements via Gemini | SIMPL/BIRP drafting, ABC-to-goals, Command Center live chat, voice dictation | M1, M3 | PLANNED |
-| M5 | Phase 5: Dashboards & Compliance Analytics | Live billing/compliance/caseload/budget charts with loading skeletons | M1, M3 | PLANNED |
-| M-FINAL | Final Verification & Hardening | 100% E2E test pass (Tiers 1-4) + Tier 5 adversarial tests + Forensic Audit | M-TEST, M1, M2, M3, M4, M5 | PLANNED |
+| M2 | Phase 2: Auth Guards & RBAC | SignInScreen, route guards, RBAC store sync, action gating, RBAC rules | M1 | DONE |
+| M3 | Phase 3: Real-Time & Offline Sync | onSnapshot listeners, persistent cache, OfflineDelta flush, connection status | M1, M2 | DONE |
+| M4 | Phase 4: AI Enhancements via Gemini | SIMPL/BIRP drafting, ABC-to-goals, Command Center live chat, voice dictation | M1, M3 | DONE |
+| M5 | Phase 5: Dashboards & Compliance Analytics | Live billing/compliance/caseload/budget charts with loading skeletons | M1, M3 | DONE |
+| M-FINAL | Final Verification & Hardening | 100% E2E test pass (Tiers 1-4) + Tier 5 adversarial tests + Forensic Audit | M-TEST, M1, M2, M3, M4, M5 | DONE |
 
 ## Interface Contracts
 ### `lib/firestoreService.ts` ↔ `stores/useManagementStore.ts`

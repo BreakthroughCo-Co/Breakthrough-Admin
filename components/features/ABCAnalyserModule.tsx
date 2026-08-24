@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { useManagementStore } from '@/stores/useManagementStore';
-import { ABCLog, Client } from '@/types';
+import { ABCLog, Client, ClientGoal } from '@/types';
+import { suggestGoalsFromABC, SuggestedNDISGoal } from '@/lib/ai-assistant';
 import {
   BarChart3,
   Plus,
@@ -15,9 +16,12 @@ import {
 } from 'lucide-react';
 
 export const ABCAnalyserModule: React.FC = () => {
-  const { abcLogs, clients, currentUser, addABCLog } = useManagementStore();
+  const { abcLogs, clients, currentUser, addABCLog, updateClient, addNotification } = useManagementStore();
+  const isViewer = currentUser?.role === 'VIEWER';
   const [selectedClient, setSelectedClient] = useState(clients[0]?.id || 'cli-101');
   const [isAdding, setIsAdding] = useState(false);
+  const [showGoalSuggestions, setShowGoalSuggestions] = useState(false);
+  const [suggestedGoals, setSuggestedGoals] = useState<SuggestedNDISGoal[]>([]);
 
   const [antecedent, setAntecedent] = useState('');
   const [behavior, setBehavior] = useState('');
@@ -43,7 +47,7 @@ export const ABCAnalyserModule: React.FC = () => {
       durationMinutes: 5,
       location: 'Day Activity Center',
       perceivedFunction: functionType,
-      recordedBy: currentUser.name,
+      recordedBy: currentUser?.name || 'Practitioner',
     });
 
     setIsAdding(false);
@@ -68,14 +72,104 @@ export const ABCAnalyserModule: React.FC = () => {
           </div>
         </div>
 
-        <button
-          onClick={() => setIsAdding(true)}
-          className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white font-semibold text-xs rounded-lg flex items-center gap-2 transition-all shadow-sm shrink-0 self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Log ABC Observation</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={async () => {
+              const clientLogs = abcLogs.filter((l) => l.clientId === selectedClient || !selectedClient);
+              const goals = await suggestGoalsFromABC(clientLogs.length > 0 ? clientLogs : abcLogs);
+              setSuggestedGoals(goals);
+              setShowGoalSuggestions(true);
+            }}
+            className="px-3.5 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-semibold text-xs rounded-lg flex items-center gap-2 transition-all shadow-sm shrink-0"
+            title="Generate NDIS SMART & GAS Goals from ABC observation patterns"
+          >
+            <Sparkles className="w-4 h-4 text-amber-300" />
+            <span>AI Suggest Goals</span>
+          </button>
+
+          {!isViewer && (
+            <button
+              onClick={() => setIsAdding(true)}
+              className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white font-semibold text-xs rounded-lg flex items-center gap-2 transition-all shadow-sm shrink-0 self-start sm:self-auto"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Log ABC Observation</span>
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* AI Goal Suggestions Panel */}
+      {showGoalSuggestions && suggestedGoals.length > 0 && (
+        <div className="bg-slate-900/90 border border-teal-500/30 rounded-xl p-5 space-y-4 shadow-lg">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-teal-400" />
+              <h3 className="text-sm font-bold text-white">AI-Generated NDIS SMART & GAS Goals from ABC Patterns</h3>
+            </div>
+            <button
+              onClick={() => setShowGoalSuggestions(false)}
+              className="text-slate-400 hover:text-white text-xs px-2 py-1 bg-slate-800 rounded-md"
+            >
+              Dismiss
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {suggestedGoals.map((goal) => (
+              <div
+                key={goal.id}
+                className="bg-slate-950 border border-slate-800 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-teal-300">{goal.title}</span>
+                    <span className="text-[10px] px-2 py-0.5 bg-teal-500/20 text-teal-400 rounded-full font-mono">
+                      GAS: {goal.gasScore}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 flex items-center gap-3">
+                    <span>Category: {goal.category}</span>
+                    <span>Target: {goal.targetDate}</span>
+                    <span>Initial Progress: {goal.progressPercent}%</span>
+                  </div>
+                </div>
+
+                {!isViewer && (
+                  <button
+                    onClick={() => {
+                      if (selectedClientObj) {
+                        const newGoal: ClientGoal = {
+                          id: goal.id,
+                          title: goal.title,
+                          category: goal.category,
+                          targetDate: goal.targetDate,
+                          progressPercent: goal.progressPercent,
+                          status: goal.status as any,
+                          gasScore: goal.gasScore
+                        };
+                        const updatedGoals = [...(selectedClientObj.goals || []), newGoal];
+                        updateClient(selectedClientObj.id, { goals: updatedGoals });
+                        addNotification({
+                          title: 'Goal Added to Participant',
+                          message: `"${goal.title}" linked to ${selectedClientObj.name}.`,
+                          type: 'clinical',
+                          severity: 'low'
+                        });
+                        setSuggestedGoals((prev) => prev.filter((g) => g.id !== goal.id));
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shrink-0 self-start sm:self-auto shadow-sm"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Adopt Goal</span>
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Observation Logs Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

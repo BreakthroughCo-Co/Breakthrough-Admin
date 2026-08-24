@@ -117,6 +117,7 @@ const PRIORITY_BADGES: Record<
 
 export const CRMModule: React.FC = () => {
   const {
+    currentUser,
     leads,
     crmTasks = [],
     clients,
@@ -129,6 +130,8 @@ export const CRMModule: React.FC = () => {
     toggleCRMTaskStatus,
     setActiveTab
   } = useManagementStore();
+
+  const isViewer = currentUser?.role === 'VIEWER';
 
   const [activeSubTab, setActiveSubTab] = useState<'tasks' | 'pipeline'>('tasks');
   const [isAddingLead, setIsAddingLead] = useState(false);
@@ -295,22 +298,24 @@ export const CRMModule: React.FC = () => {
             </button>
           </div>
 
-          {activeSubTab === 'tasks' ? (
-            <button
-              onClick={() => setIsAddingTask(true)}
-              className="px-3.5 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              <span>New Action Task</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => setIsAddingLead(true)}
-              className="px-3.5 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              <span>New Prospect</span>
-            </button>
+          {!isViewer && (
+            activeSubTab === 'tasks' ? (
+              <button
+                onClick={() => setIsAddingTask(true)}
+                className="px-3.5 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span>New Action Task</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setIsAddingLead(true)}
+                className="px-3.5 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span>New Prospect</span>
+              </button>
+            )
           )}
         </div>
       </div>
@@ -491,13 +496,16 @@ export const CRMModule: React.FC = () => {
                         {/* Checkbox */}
                         <button
                           type="button"
+                          disabled={isViewer}
                           onClick={() => toggleCRMTaskStatus(task.id)}
                           className={`w-5 h-5 rounded-lg border flex items-center justify-center transition shrink-0 mt-0.5 ${
-                            isCompleted
+                            isViewer
+                              ? 'opacity-60 cursor-not-allowed border-slate-700 bg-slate-950'
+                              : isCompleted
                               ? 'bg-teal-500 border-teal-500 text-slate-950 font-bold'
                               : 'border-slate-600 hover:border-teal-400 bg-slate-950'
                           }`}
-                          title={isCompleted ? 'Mark as pending' : 'Mark as completed'}
+                          title={isViewer ? 'View-only' : isCompleted ? 'Mark as pending' : 'Mark as completed'}
                         >
                           {isCompleted && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                         </button>
@@ -584,8 +592,11 @@ export const CRMModule: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <select
                             value={task.status}
+                            disabled={isViewer}
                             onChange={(e) => updateCRMTask(task.id, { status: e.target.value as TaskStatus })}
                             className={`text-[11px] font-bold rounded-lg px-2 py-1 border bg-slate-950 ${
+                              isViewer ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                            } ${
                               task.status === 'Completed'
                                 ? 'text-emerald-400 border-emerald-500/40'
                                 : task.status === 'In Progress'
@@ -599,13 +610,15 @@ export const CRMModule: React.FC = () => {
                             <option value="Deferred">Deferred</option>
                           </select>
 
-                          <button
-                            onClick={() => deleteCRMTask(task.id)}
-                            className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition"
-                            title="Delete Task"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {!isViewer && (
+                            <button
+                              onClick={() => deleteCRMTask(task.id)}
+                              className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition"
+                              title="Delete Task"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -637,13 +650,15 @@ export const CRMModule: React.FC = () => {
                       <div key={lead.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2 text-xs hover:border-slate-700 transition">
                         <div className="flex items-start justify-between gap-1">
                           <div className="font-bold text-white text-sm">{lead.prospectName}</div>
-                          <button
-                            onClick={() => deleteLead(lead.id)}
-                            className="text-slate-500 hover:text-rose-400 p-0.5"
-                            title="Remove prospect"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {!isViewer && (
+                            <button
+                              onClick={() => deleteLead(lead.id)}
+                              className="text-slate-500 hover:text-rose-400 p-0.5"
+                              title="Remove prospect"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                         <p className="text-[11px] text-slate-400">{lead.notes}</p>
                         
@@ -662,8 +677,11 @@ export const CRMModule: React.FC = () => {
                         <div className="pt-2 flex justify-end">
                           <select
                             value={lead.stage}
+                            disabled={isViewer}
                             onChange={(e) => updateLeadStage(lead.id, e.target.value as any)}
-                            className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[10px] text-teal-400 font-bold focus:outline-none"
+                            className={`bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[10px] text-teal-400 font-bold focus:outline-none ${
+                              isViewer ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                            }`}
                           >
                             {STAGES.map((s) => (
                               <option key={s} value={s}>

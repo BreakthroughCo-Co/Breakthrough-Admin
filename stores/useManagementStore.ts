@@ -77,21 +77,77 @@ import {
   fetchUsers,
   getUserProfile,
   saveUserProfile,
-  updateUserProfile as updateUserProfileDoc,
   seedInitialFirestoreDataIfEmpty,
-  subscribeToClients,
-  subscribeToCaseNotes,
-  subscribeToBillingClaims,
-  subscribeToIncidents,
-  subscribeToRestrictivePractices
+  createDocument,
+  updateDocument,
+  deleteDocument
 } from '@/lib/firestoreService';
+import { initFirestoreListeners } from '@/lib/firestoreListeners';
 
-// Module-level unsubscribe handles for real-time Firestore listeners (Phase 3)
-let _unsubClients: (() => void) | null = null;
-let _unsubCaseNotes: (() => void) | null = null;
-let _unsubBillingClaims: (() => void) | null = null;
-let _unsubIncidents: (() => void) | null = null;
-let _unsubRP: (() => void) | null = null;
+// Module-level cleanup handle for real-time Firestore listeners (Phase 3)
+let _firestoreListenersCleanup: (() => void) | null = null;
+
+function mapEntityToCollection(entity: string): string {
+  const norm = (entity || '').toLowerCase().trim();
+  switch (norm) {
+    case 'client':
+      return 'clients';
+    case 'casenote':
+    case 'case_note':
+    case 'note':
+      return 'caseNotes';
+    case 'billingclaim':
+    case 'billing_claim':
+    case 'claim':
+      return 'billingClaims';
+    case 'incident':
+      return 'incidents';
+    case 'restrictivepractice':
+    case 'restrictive_practice':
+    case 'rp':
+      return 'restrictivePractices';
+    case 'abclog':
+    case 'abc_log':
+    case 'abc':
+      return 'abcLogs';
+    case 'bspdocument':
+    case 'bsp_document':
+    case 'bsp':
+      return 'bspDocuments';
+    case 'crmlead':
+    case 'crm_lead':
+    case 'lead':
+      return 'crmLeads';
+    case 'crmtask':
+    case 'crm_task':
+    case 'task':
+      return 'crmTasks';
+    case 'practitioner':
+      return 'practitioners';
+    case 'supportitem':
+    case 'support_item':
+    case 'ndissupportitem':
+      return 'supportItems';
+    case 'auditlog':
+    case 'audit_log':
+    case 'audit':
+      return 'auditLogs';
+    case 'scheduledshift':
+    case 'scheduled_shift':
+    case 'shift':
+      return 'scheduledShifts';
+    case 'userprofile':
+    case 'user_profile':
+    case 'user':
+      return 'users';
+    case 'notification':
+    case 'appnotification':
+    case 'app_notification':
+      return 'notifications';
+    default:
+      return norm.endsWith('s') ? norm : `${norm}s`;
+  }
+}
 
 export type TabType =
   | 'command-center'
@@ -1224,6 +1280,7 @@ interface ManagementState {
   syncWithFirestore: () => Promise<void>;
   startRealtimeListeners: () => void;
   stopRealtimeListeners: () => void;
+  setEntities: (collection: string, data: any[]) => void;
 }
 
 export const useManagementStore = create<ManagementState>((set, get) => ({
@@ -1432,33 +1489,54 @@ export const useManagementStore = create<ManagementState>((set, get) => ({
     }
 
     set({ syncStatus: 'syncing' });
-    try {
-      // Simulate rapid robust delta transmission to cloud database
-      await new Promise((resolve) => setTimeout(resolve, 800));
+    const queueToProcess = [...queue];
+    const successfulDeltaIds: string[] = [];
+    let syncErrors = 0;
 
-      const processedCount = queue.length;
-      set({
-        offlineQueue: [],
-        pendingChangesCount: 0,
-        syncStatus: 'synced',
-        lastSyncTime: new Date().toISOString()
-      });
+    for (const delta of queueToProcess) {
+      try {
+        const colName = mapEntityToCollection(delta.entity);
+        if (delta.action === 'CREATE' || delta.action === 'UPDATE' || delta.action === 'UPDATE_GOALS') {
+          const docData = delta.payload || {};
+          await createDocument(colName, docData, delta.entityId);
+        } else if (delta.action === 'DELETE') {
+          await deleteDocument(colName, delta.entityId);
+        }
+        successfulDeltaIds.push(delta.id);
+      } catch (err) {
+        console.warn(`[DeltaSync] Failed to synchronize delta ${delta.id} (${delta.entity}/${delta.entityId}):`, err);
+        syncErrors++;
+      }
+    }
 
+    const processedCount = successfulDeltaIds.length;
+    set((state) => {
+      const remainingQueue = state.offlineQueue.filter((d) => !successfulDeltaIds.includes(d.id));
+      const isFullySynced = remainingQueue.length === 0;
+      return {
+        offlineQueue: remainingQueue,
+        pendingChangesCount: remainingQueue.length,
+        syncStatus: isFullySynced ? 'synced' : (state.isOnline ? 'pending' : 'offline'),
+        lastSyncTime: processedCount > 0 ? new Date().toISOString() : state.lastSyncTime
+      };
+    });
+
+    if (processedCount > 0) {
       get().addAuditLog(
         'DELTA_SYNC_SUCCESS',
         'OfflineDeltaQueue',
         `batch-${Date.now()}`,
-        `Successfully synchronized ${processedCount} pending local deltas to cloud database.`
+        `Successfully synchronized ${processedCount} pending local deltas to cloud database.${syncErrors > 0 ? ` (${syncErrors} failed and remained in queue)` : ''}`
       );
 
       get().addNotification({
         title: 'Offline Deltas Synchronized',
-        message: `Successfully flushed ${processedCount} queued offline records to the cloud database.`,
+        message: `Successfully flushed ${processedCount} queued offline records to the cloud database.${syncErrors > 0 ? ` (${syncErrors} remaining in queue)` : ''}`,
         type: 'compliance',
-        severity: 'low'
+        severity: syncErrors > 0 ? 'medium' : 'low'
       });
-    } catch (err) {
-      set({ syncStatus: 'pending' });
+    } else if (syncErrors > 0) {
+      set({ syncStatus: get().isOnline ? 'pending' : 'offline' });
     }
   },
 
@@ -2818,41 +2896,91 @@ export const useManagementStore = create<ManagementState>((set, get) => ({
   startRealtimeListeners: () => {
     // Tear down any existing listeners first (idempotent)
     get().stopRealtimeListeners();
-
-    const errHandler = (err: Error) => {
-      console.warn('[Realtime] Firestore listener error, operating from cache:', err.message);
-      set({ syncStatus: 'offline' });
-    };
-
-    _unsubClients = subscribeToClients((clients) => {
-      set({ clients, syncStatus: 'synced', lastSyncTime: new Date().toISOString() });
-    }, errHandler);
-
-    _unsubCaseNotes = subscribeToCaseNotes((caseNotes) => {
-      set({ caseNotes });
-    }, errHandler);
-
-    _unsubBillingClaims = subscribeToBillingClaims((billingClaims) => {
-      set({ billingClaims, claims: billingClaims });
-    }, errHandler);
-
-    _unsubIncidents = subscribeToIncidents((incidents) => {
-      set({ incidents });
-    }, errHandler);
-
-    _unsubRP = subscribeToRestrictivePractices((restrictivePractices) => {
-      set({ restrictivePractices });
-    }, errHandler);
-
+    _firestoreListenersCleanup = initFirestoreListeners(useManagementStore);
     set({ syncStatus: 'synced' });
   },
 
   stopRealtimeListeners: () => {
-    if (_unsubClients) { _unsubClients(); _unsubClients = null; }
-    if (_unsubCaseNotes) { _unsubCaseNotes(); _unsubCaseNotes = null; }
-    if (_unsubBillingClaims) { _unsubBillingClaims(); _unsubBillingClaims = null; }
-    if (_unsubIncidents) { _unsubIncidents(); _unsubIncidents = null; }
-    if (_unsubRP) { _unsubRP(); _unsubRP = null; }
+    if (_firestoreListenersCleanup) {
+      try {
+        _firestoreListenersCleanup();
+      } catch (err) {
+        console.warn('[Realtime] Error stopping Firestore listeners:', err);
+      }
+      _firestoreListenersCleanup = null;
+    }
+  },
+
+  setEntities: (collection: string, data: any[]) => {
+    const norm = (collection || '').toLowerCase().trim();
+    switch (norm) {
+      case 'clients':
+        set({ clients: data });
+        break;
+      case 'casenotes':
+      case 'case_notes':
+      case 'notes':
+        set({ caseNotes: data });
+        break;
+      case 'billingclaims':
+      case 'billing_claims':
+      case 'claims':
+        set({ billingClaims: data, claims: data });
+        break;
+      case 'incidents':
+        set({ incidents: data });
+        break;
+      case 'restrictivepractices':
+      case 'restrictive_practices':
+      case 'rp':
+        set({ restrictivePractices: data });
+        break;
+      case 'abclogs':
+      case 'abc_logs':
+      case 'abc':
+        set({ abcLogs: data });
+        break;
+      case 'bspdocuments':
+      case 'bsp_documents':
+      case 'bsp':
+        set({ bspDocuments: data, bspPlans: data, ...(data && data.length > 0 ? { bsp: data[0] } : {}) });
+        break;
+      case 'crmleads':
+      case 'crm_leads':
+      case 'leads':
+        set({ leads: data });
+        break;
+      case 'crmtasks':
+      case 'crm_tasks':
+      case 'tasks':
+        set({ crmTasks: data });
+        break;
+      case 'practitioners':
+        set({ practitioners: data });
+        break;
+      case 'supportitems':
+      case 'support_items':
+        set({ supportItems: data });
+        break;
+      case 'auditlogs':
+      case 'audit_logs':
+        set({ auditLogs: data });
+        break;
+      case 'scheduledshifts':
+      case 'scheduled_shifts':
+      case 'shifts':
+        set({ scheduledShifts: data });
+        break;
+      case 'users':
+        set({ users: data });
+        break;
+      case 'notifications':
+        set({ notifications: data });
+        break;
+      default:
+        set({ [collection]: data });
+        break;
+    }
   }
 }));
 

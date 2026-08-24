@@ -18,7 +18,8 @@ interface GoalTrackerProps {
 }
 
 export const GoalTracker: React.FC<GoalTrackerProps> = ({ client }) => {
-  const { addClientGoal, updateClientGoal, deleteClientGoal } = useManagementStore();
+  const { currentUser, addClientGoal, updateClientGoal, deleteClientGoal } = useManagementStore();
+  const isViewer = currentUser?.role === 'VIEWER';
   const [isAdding, setIsAdding] = useState(false);
 
   const [newGoal, setNewGoal] = useState(() => ({
@@ -96,13 +97,15 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({ client }) => {
             <span className="text-[10px] uppercase text-slate-400 font-bold block" title="Standardized Goal Attainment T-Score (Mean = 50)">GAS T-Score</span>
             <span className={`text-lg font-black font-mono ${gasTScore >= 50 ? 'text-emerald-400' : 'text-amber-400'}`}>{gasTScore}</span>
           </div>
-          <button
-            onClick={() => setIsAdding(true)}
-            className="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Goal</span>
-          </button>
+          {!isViewer && (
+            <button
+              onClick={() => setIsAdding(true)}
+              className="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Goal</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -154,13 +157,15 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({ client }) => {
                   <span className="font-mono font-black text-teal-400 text-lg">
                     {goal.progressPercent}%
                   </span>
-                  <button
-                    onClick={() => deleteClientGoal(client.id, goal.id)}
-                    className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-900 rounded transition-all"
-                    title="Delete Goal"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {!isViewer && (
+                    <button
+                      onClick={() => deleteClientGoal(client.id, goal.id)}
+                      className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-900 rounded transition-all"
+                      title="Delete Goal"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -174,9 +179,12 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({ client }) => {
                   type="range"
                   min="0"
                   max="100"
+                  disabled={isViewer}
                   value={goal.progressPercent}
                   onChange={(e) => handleSliderChange(goal.id, Number(e.target.value))}
-                  className="w-full accent-teal-500 bg-slate-800 h-2 rounded-lg cursor-pointer"
+                  className={`w-full accent-teal-500 bg-slate-800 h-2 rounded-lg ${
+                    isViewer ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                  }`}
                 />
                 <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden mt-1">
                   <div
@@ -219,6 +227,7 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({ client }) => {
                       <button
                         key={gas.score}
                         type="button"
+                        disabled={isViewer}
                         onClick={() => {
                           const newHistory = [
                             ...(goal.gasHistory || []),
@@ -237,6 +246,8 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({ client }) => {
                         }}
                         title={gas.desc}
                         className={`p-2 rounded text-center border transition-all ${
+                          isViewer ? 'opacity-60 cursor-not-allowed' : ''
+                        } ${
                           active
                             ? gas.score === 0
                               ? 'bg-teal-500/20 text-teal-300 border-teal-500/50 font-bold shadow-sm'

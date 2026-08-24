@@ -35,7 +35,8 @@ interface MilestoneItem {
 }
 
 export const GoalTrackingFeature: React.FC<GoalTrackingFeatureProps> = ({ client }) => {
-  const { addClientGoal, updateClientGoal, deleteClientGoal, addNotification, addAuditLog } = useManagementStore();
+  const { currentUser, addClientGoal, updateClientGoal, deleteClientGoal, addNotification, addAuditLog } = useManagementStore();
+  const isViewer = currentUser?.role === 'VIEWER';
   const [filterCategory, setFilterCategory] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [isAddingGoal, setIsAddingGoal] = useState(false);
@@ -189,13 +190,15 @@ export const GoalTrackingFeature: React.FC<GoalTrackingFeatureProps> = ({ client
             </select>
           </div>
 
-          <button
-            onClick={() => setIsAddingGoal(true)}
-            className="px-3.5 py-1.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>New NDIS Goal</span>
-          </button>
+          {!isViewer && (
+            <button
+              onClick={() => setIsAddingGoal(true)}
+              className="px-3.5 py-1.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>New NDIS Goal</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -356,9 +359,12 @@ export const GoalTrackingFeature: React.FC<GoalTrackingFeatureProps> = ({ client
                       type="range"
                       min="0"
                       max="100"
+                      disabled={isViewer}
                       value={goal.progressPercent}
                       onChange={(e) => handleSliderChange(goal.id, Number(e.target.value))}
-                      className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-teal-500"
+                      className={`w-full h-1.5 bg-slate-800 rounded-lg appearance-none accent-teal-500 ${
+                        isViewer ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                      }`}
                     />
                   </div>
 
@@ -367,26 +373,30 @@ export const GoalTrackingFeature: React.FC<GoalTrackingFeatureProps> = ({ client
                     <span className="text-[10px] text-slate-400 font-bold uppercase pl-1">Quick Step:</span>
                     <div className="flex items-center gap-1 font-mono text-[10px]">
                       <button
+                        disabled={isViewer}
                         onClick={() => handleAdjustProgress(goal.id, goal.progressPercent, -10)}
-                        className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-bold transition-all"
+                        className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         -10%
                       </button>
                       <button
+                        disabled={isViewer}
                         onClick={() => handleAdjustProgress(goal.id, goal.progressPercent, 10)}
-                        className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-teal-300 rounded font-bold transition-all"
+                        className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-teal-300 rounded font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         +10%
                       </button>
                       <button
+                        disabled={isViewer}
                         onClick={() => handleAdjustProgress(goal.id, goal.progressPercent, 25)}
-                        className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-teal-300 rounded font-bold transition-all"
+                        className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-teal-300 rounded font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         +25%
                       </button>
                       <button
+                        disabled={isViewer}
                         onClick={() => handleSliderChange(goal.id, 100)}
-                        className="px-2 py-1 bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 rounded font-bold transition-all border border-emerald-500/30"
+                        className="px-2 py-1 bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 rounded font-bold transition-all border border-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         ✓ 100%
                       </button>
@@ -405,8 +415,11 @@ export const GoalTrackingFeature: React.FC<GoalTrackingFeatureProps> = ({ client
                         return (
                           <button
                             key={score}
+                            disabled={isViewer}
                             onClick={() => handleUpdateGasScore(goal.id, score)}
                             className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all ${
+                              isViewer ? 'opacity-60 cursor-not-allowed' : ''
+                            } ${
                               isSelected
                                 ? score > 0
                                   ? 'bg-emerald-600 text-white shadow-sm'
@@ -434,13 +447,15 @@ export const GoalTrackingFeature: React.FC<GoalTrackingFeatureProps> = ({ client
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => deleteClientGoal(client.id, goal.id)}
-                    className="text-slate-500 hover:text-rose-400 p-1 transition-colors"
-                    title="Remove Goal"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {!isViewer && (
+                    <button
+                      onClick={() => deleteClientGoal(client.id, goal.id)}
+                      className="text-slate-500 hover:text-rose-400 p-1 transition-colors"
+                      title="Remove Goal"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             );

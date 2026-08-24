@@ -8,7 +8,15 @@ import {
   User,
   UserCredential
 } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  doc,
+  getDocFromServer,
+  Firestore
+} from 'firebase/firestore';
 import appletConfig from '../firebase-applet-config.json';
 
 // Comprehensive Scopes for Google Workspace Integration
@@ -38,7 +46,28 @@ export const WORKSPACE_SCOPES = [
 
 const app = getApps().length > 0 ? getApp() : initializeApp(appletConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app, (appletConfig as any).firestoreDatabaseId);
+
+function getFirestoreInstance(): Firestore {
+  const databaseId = (appletConfig as any).firestoreDatabaseId;
+  if (typeof window !== 'undefined') {
+    try {
+      const cacheSettings = {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager()
+        })
+      };
+      return databaseId
+        ? initializeFirestore(app, cacheSettings, databaseId)
+        : initializeFirestore(app, cacheSettings);
+    } catch (err) {
+      console.warn('Persistent multi-tab cache initialization failed, falling back to getFirestore:', err);
+      return databaseId ? getFirestore(app, databaseId) : getFirestore(app);
+    }
+  }
+  return databaseId ? getFirestore(app, databaseId) : getFirestore(app);
+}
+
+export const db: Firestore = getFirestoreInstance();
 
 // Test Firestore Connection
 export async function testFirestoreConnection() {

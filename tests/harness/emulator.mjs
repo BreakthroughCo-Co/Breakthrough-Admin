@@ -671,8 +671,11 @@ export class InMemoryFirestore {
 
   // Security Rules & RBAC Evaluation Engine
   evaluateSecurityRule(operation, colName, docId, data, authContext, existingDoc = null) {
-    // 1. System doc is public
-    if (colName === 'system') return true;
+    // 1. System doc is public read-only health probe
+    if (colName === 'system') {
+      if (operation === 'get') return true;
+      throw new Error(`PERMISSION_DENIED: /system collection is read-only`);
+    }
 
     // 2. Default deny for unauthenticated requests
     if (!authContext || !authContext.uid) {

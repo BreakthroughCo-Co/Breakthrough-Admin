@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 
 export const RestrictivePracticesModule: React.FC = () => {
-  const { restrictivePractices, clients, addRestrictivePractice } = useManagementStore();
+  const { restrictivePractices, clients, currentUser, addRestrictivePractice } = useManagementStore();
+  const isViewer = currentUser?.role === 'VIEWER';
   const [selectedClient, setSelectedClient] = useState(clients[0]?.id || 'cli-101');
   const [isAdding, setIsAdding] = useState(false);
 
@@ -65,13 +66,15 @@ export const RestrictivePracticesModule: React.FC = () => {
           </div>
         </div>
 
-        <button
-          onClick={() => setIsAdding(true)}
-          className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs rounded-lg flex items-center gap-2 transition-all shadow-sm shrink-0 self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Register Restrictive Practice</span>
-        </button>
+        {!isViewer && (
+          <button
+            onClick={() => setIsAdding(true)}
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs rounded-lg flex items-center gap-2 transition-all shadow-sm shrink-0 self-start sm:self-auto"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Register Restrictive Practice</span>
+          </button>
+        )}
       </div>
 
       {/* Practice Cards Grid */}

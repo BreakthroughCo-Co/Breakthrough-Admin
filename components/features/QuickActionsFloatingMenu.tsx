@@ -286,6 +286,10 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
     });
   };
 
+  if (currentUser?.role === 'VIEWER') {
+    return null;
+  }
+
   return (
     <>
       {/* Floating Speed Dial Container */}

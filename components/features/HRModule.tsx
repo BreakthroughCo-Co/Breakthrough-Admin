@@ -26,7 +26,8 @@ import {
 } from 'lucide-react';
 
 export const HRModule: React.FC = () => {
-  const { practitioners, clients, addNotification, addAuditLog } = useManagementStore();
+  const { currentUser, practitioners, clients, addNotification, addAuditLog } = useManagementStore();
+  const isViewer = currentUser?.role === 'VIEWER';
   const [selectedClientForRostering, setSelectedClientForRostering] = useState(clients[0]?.id || 'cli-101');
   const [isSendingReminders, setIsSendingReminders] = useState(false);
   const [reminderSentStatus, setReminderSentStatus] = useState<string | null>(null);
@@ -305,7 +306,7 @@ export const HRModule: React.FC = () => {
 
           <button
             onClick={handleSendComplianceReminders}
-            disabled={isSendingReminders}
+            disabled={isSendingReminders || isViewer}
             className="px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold text-xs rounded-lg flex items-center gap-2 transition-all shadow-md disabled:opacity-50"
           >
             <Send className="w-4 h-4" />
@@ -578,7 +579,7 @@ export const HRModule: React.FC = () => {
 
                 <button
                   onClick={handleAddShift}
-                  disabled={currentConflicts.some((c) => c.type === 'OVERLAP' || (c.type === 'EXPIRY' && c.detail.includes('expired')))}
+                  disabled={isViewer || currentConflicts.some((c) => c.type === 'OVERLAP' || (c.type === 'EXPIRY' && c.detail.includes('expired')))}
                   className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-lg transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
                 >
                   <CalendarCheck className="w-4 h-4" />

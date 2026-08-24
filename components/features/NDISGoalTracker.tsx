@@ -48,6 +48,7 @@ export const NDISGoalTracker: React.FC<NDISGoalTrackerProps> = ({
   onNavigateToNote,
 }) => {
   const {
+    currentUser,
     clients,
     caseNotes,
     selectedClientId,
@@ -61,6 +62,8 @@ export const NDISGoalTracker: React.FC<NDISGoalTrackerProps> = ({
     addAuditLog,
     setActiveTab
   } = useManagementStore();
+
+  const isViewer = currentUser?.role === 'VIEWER';
 
   // Active Client Selection
   const [activeClientId, setActiveClientId] = useState<string>(() => {
@@ -318,14 +321,16 @@ Format with:
             </select>
           </div>
 
-          <button
-            id="add-ndis-goal-btn"
-            onClick={() => setIsAddingGoal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs rounded-xl shadow-sm transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add NDIS Goal</span>
-          </button>
+          {!isViewer && (
+            <button
+              id="add-ndis-goal-btn"
+              onClick={() => setIsAddingGoal(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs rounded-xl shadow-sm transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add NDIS Goal</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -586,13 +591,15 @@ Format with:
                           {goal.progressPercent}%
                         </span>
                       </div>
-                      <button
-                        onClick={() => deleteClientGoal(client.id, goal.id)}
-                        className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-900 rounded transition-all"
-                        title="Delete Goal"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {!isViewer && (
+                        <button
+                          onClick={() => deleteClientGoal(client.id, goal.id)}
+                          className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-900 rounded transition-all"
+                          title="Delete Goal"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -606,9 +613,12 @@ Format with:
                       type="range"
                       min="0"
                       max="100"
+                      disabled={isViewer}
                       value={goal.progressPercent}
                       onChange={(e) => handleProgressChange(goal.id, Number(e.target.value))}
-                      className="w-full accent-teal-500 bg-slate-800 h-2 rounded-lg cursor-pointer"
+                      className={`w-full accent-teal-500 bg-slate-800 h-2 rounded-lg ${
+                        isViewer ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                      }`}
                     />
                     <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden mt-1">
                       <div
@@ -632,14 +642,16 @@ Format with:
                         <span>Linked Clinical Case Notes ({linkedNotes.length})</span>
                       </span>
 
-                      <button
-                        id={`link-note-btn-${goal.id}`}
-                        onClick={() => setActiveGoalForLinking(goal)}
-                        className="px-2.5 py-1 bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/30 rounded text-[11px] font-bold flex items-center gap-1 transition-all"
-                      >
-                        <Link2 className="w-3 h-3" />
-                        <span>Link Clinical Note</span>
-                      </button>
+                      {!isViewer && (
+                        <button
+                          id={`link-note-btn-${goal.id}`}
+                          onClick={() => setActiveGoalForLinking(goal)}
+                          className="px-2.5 py-1 bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/30 rounded text-[11px] font-bold flex items-center gap-1 transition-all"
+                        >
+                          <Link2 className="w-3 h-3" />
+                          <span>Link Clinical Note</span>
+                        </button>
+                      )}
                     </div>
 
                     {/* Linked Notes List */}
@@ -679,13 +691,15 @@ Format with:
                               >
                                 <Eye className="w-3.5 h-3.5" />
                               </button>
-                              <button
-                                onClick={() => handleUnlinkNote(goal.id, note.id)}
-                                className="p-1 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded transition-all"
-                                title="Unlink from goal"
-                              >
-                                <Unlink className="w-3.5 h-3.5" />
-                              </button>
+                              {!isViewer && (
+                                <button
+                                  onClick={() => handleUnlinkNote(goal.id, note.id)}
+                                  className="p-1 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded transition-all"
+                                  title="Unlink from goal"
+                                >
+                                  <Unlink className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                             </div>
                           </div>
                         ))}

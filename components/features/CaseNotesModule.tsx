@@ -946,7 +946,7 @@ ${rawText}`;
                       <span>View Goal Tracker</span>
                       <ArrowUpRight className="w-3 h-3" />
                     </button>
-                    {isAdmin && (
+                    {(!isViewer && (isAdmin || note.practitionerId === currentUser?.id || note.practitionerId === currentUser?.practitionerId || (note as any).authorId === currentUser?.id || (note as any).authorId === currentUser?.uid || note.practitionerName === currentUser?.name)) && (
                       <button
                         type="button"
                         onClick={() => {
@@ -955,7 +955,7 @@ ${rawText}`;
                           }
                         }}
                         className="text-rose-400 hover:text-rose-300 hover:underline flex items-center gap-1 font-semibold"
-                        title="Delete Case Note (Admin Only)"
+                        title={isAdmin ? "Delete Case Note (Admin)" : "Delete Case Note (Author Practitioner)"}
                       >
                         <Trash2 className="w-3 h-3" />
                         <span>Delete</span>

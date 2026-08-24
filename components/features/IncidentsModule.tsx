@@ -23,7 +23,8 @@ import { Incident, Client } from '@/types';
 import { IncidentPDFReportModal } from './IncidentPDFReportModal';
 
 export const IncidentsModule: React.FC = () => {
-  const { incidents, clients, addIncident, updateIncidentStatus, setActiveTab } = useManagementStore();
+  const { incidents, clients, currentUser, addIncident, updateIncidentStatus, setActiveTab } = useManagementStore();
+  const isViewer = currentUser?.role === 'VIEWER';
   const [isAdding, setIsAdding] = useState(false);
   const [selectedIncidentForPDF, setSelectedIncidentForPDF] = useState<Incident | null>(null);
   const [selectedClient, setSelectedClient] = useState(clients[0]?.id || 'cli-101');
@@ -247,13 +248,15 @@ export const IncidentsModule: React.FC = () => {
             <span>Print PDF</span>
           </button>
 
-          <button
-            onClick={() => setIsAdding(true)}
-            className="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs rounded-lg flex items-center gap-2 transition-all shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Log Incident</span>
-          </button>
+          {!isViewer && (
+            <button
+              onClick={() => setIsAdding(true)}
+              className="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs rounded-lg flex items-center gap-2 transition-all shadow-sm"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Log Incident</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -353,8 +356,11 @@ export const IncidentsModule: React.FC = () => {
                   </span>
                   <select
                     value={incident.status}
+                    disabled={isViewer}
                     onChange={(e) => updateIncidentStatus(incident.id, e.target.value as any)}
-                    className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-teal-300 font-bold cursor-pointer"
+                    className={`bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-teal-300 font-bold ${
+                      isViewer ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                    }`}
                   >
                     <option value="Open">Open</option>
                     <option value="Under Investigation">Under Investigation</option>

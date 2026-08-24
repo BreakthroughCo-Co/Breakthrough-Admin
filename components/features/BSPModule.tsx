@@ -17,6 +17,7 @@ import {
 
 export const BSPModule: React.FC = () => {
   const { bspDocuments, clients, currentUser, addBSPDocument, setActiveTab } = useManagementStore();
+  const isViewer = currentUser?.role === 'VIEWER';
   const [selectedClient, setSelectedClient] = useState(clients[0]?.id || 'cli-101');
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -81,7 +82,7 @@ Provide JSON output with key sections:
       reactiveStrategies: reactive ? reactive.split('\n') : ['De-escalation script', 'Sensory break'],
       restrictivePractices: [],
       reviewDate: new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString().slice(0, 10),
-      authorName: currentUser.name,
+      authorName: currentUser?.name || 'Practitioner',
       lastUpdated: new Date().toISOString(),
     });
 
@@ -99,25 +100,27 @@ Provide JSON output with key sections:
             <FileSpreadsheet className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">Behaviour Support Plan (BSP) Studio</h2>
+            <h2 className="text-lg font-bold text-white">Positive Behaviour Support Plans (BSP)</h2>
             <p className="text-xs text-slate-400">
-              AI-assisted Positive Behaviour Support Plan authoring, versioning, and NDIS Quality Commission compliance.
+              NDIS Quality and Safeguards Commission compliant BSP authoring and multi-tier proactive strategy formulation.
             </p>
           </div>
         </div>
 
-        <button
-          onClick={handleGenerateAiBsp}
-          disabled={isGenerating}
-          className="px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold text-xs rounded-lg flex items-center gap-2 transition-all shadow-md shrink-0 self-start sm:self-auto"
-        >
-          {isGenerating ? (
-            <RefreshCw className="w-4 h-4 animate-spin text-teal-300" />
-          ) : (
-            <Sparkles className="w-4 h-4 text-amber-300" />
-          )}
-          <span>{isGenerating ? 'Synthesizing BSP...' : 'Generate AI BSP Draft'}</span>
-        </button>
+        {!isViewer && (
+          <button
+            onClick={handleGenerateAiBsp}
+            disabled={isGenerating}
+            className="px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold text-xs rounded-lg flex items-center gap-2 transition-all shadow-md shrink-0 self-start sm:self-auto"
+          >
+            {isGenerating ? (
+              <RefreshCw className="w-4 h-4 animate-spin text-teal-300" />
+            ) : (
+              <Sparkles className="w-4 h-4 text-amber-300" />
+            )}
+            <span>{isGenerating ? 'Synthesizing BSP...' : 'Generate AI BSP Draft'}</span>
+          </button>
+        )}
       </div>
 
       {/* Editor & Active BSPs Split */}
@@ -134,6 +137,7 @@ Provide JSON output with key sections:
               <label className="block text-slate-400 mb-1">Select Participant</label>
               <select
                 value={selectedClient}
+                disabled={isViewer}
                 onChange={(e) => setSelectedClient(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white font-bold"
               >
@@ -150,6 +154,7 @@ Provide JSON output with key sections:
               <textarea
                 rows={3}
                 value={summary}
+                disabled={isViewer}
                 onChange={(e) => setSummary(e.target.value)}
                 placeholder="Core clinical approach, neuroaffirming principles..."
                 className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white"
@@ -163,6 +168,7 @@ Provide JSON output with key sections:
               <textarea
                 rows={3}
                 value={proactive}
+                disabled={isViewer}
                 onChange={(e) => setProactive(e.target.value)}
                 placeholder="• Visual schedule board&#10;• Sensory break every 45 mins"
                 className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white"
@@ -176,19 +182,22 @@ Provide JSON output with key sections:
               <textarea
                 rows={3}
                 value={reactive}
+                disabled={isViewer}
                 onChange={(e) => setReactive(e.target.value)}
                 placeholder="• 2-word calm prompts&#10;• Access quiet room"
                 className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white"
               />
             </div>
 
-            <button
-              onClick={handleSaveBsp}
-              className="w-full py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-2 shadow-md transition-all"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Save & Publish BSP Version</span>
-            </button>
+            {!isViewer && (
+              <button
+                onClick={handleSaveBsp}
+                className="w-full py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-2 shadow-md transition-all"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Save & Publish BSP Version</span>
+              </button>
+            )}
           </div>
         </div>
 

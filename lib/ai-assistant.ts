@@ -114,59 +114,145 @@ export const generateAISOAPNote = (rawNotes: string, clientName: string): AISOAP
   };
 };
 
-export interface AICaseNoteDraft {
+export interface LiveMetricsContext {
+  clients?: any[];
+  claims?: any[];
+  practitioners?: any[];
+  restrictivePractices?: any[];
+  incidents?: any[];
+}
+
+export interface SuggestedNDISGoal {
+  id: string;
+  title: string;
+  category: string;
+  targetDate: string;
+  progressPercent: number;
+  status: string;
+  gasScore: number;
+}
+
+export const draftCaseNote = async (
+  summary: string,
+  format: 'SIMPL' | 'BIRP' | 'Standard' | 'SOAP' = 'SIMPL',
+  clientName: string = 'Participant'
+): Promise<{
+  content: string;
+  sections?: Record<string, string>;
   subjective: string;
   objective: string;
   assessment: string;
   plan: string;
-  situation?: string;
-  intervention?: string;
-  progress?: string;
-}
+}> => {
+  const draft = await generateCaseNoteDraft(format, summary, clientName);
+  const formattedContent = format === 'BIRP'
+    ? `BEHAVIOR: ${draft.subjective}\nINTERVENTION: ${draft.objective}\nRESPONSE: ${draft.assessment}\nPLAN: ${draft.plan}`
+    : `SUBJECTIVE: ${draft.subjective}\nOBJECTIVE: ${draft.objective}\nASSESSMENT: ${draft.assessment}\nPLAN: ${draft.plan}`;
 
-export const generateCaseNoteDraft = async (
-  format: 'SIMPL' | 'BIRP' | 'Standard' | 'SOAP',
-  rawNotes: string,
-  clientName: string
-): Promise<AICaseNoteDraft> => {
-  const prompt = `Convert the following clinical observation notes for participant "${clientName}" into structured ${format} format notes suitable for NDIS Quality & Safeguards compliance:
-"${rawNotes}"
+  return {
+    content: formattedContent,
+    sections: {
+      subjective: draft.subjective,
+      objective: draft.objective,
+      assessment: draft.assessment,
+      plan: draft.plan,
+    },
+    subjective: draft.subjective,
+    objective: draft.objective,
+    assessment: draft.assessment,
+    plan: draft.plan,
+  };
+};
 
-Format as JSON with keys: subjective, objective, assessment, plan, situation, intervention, progress.`;
-
-  const aiText = await callGeminiClinicalAssistant(
-    prompt,
-    'You are an expert Allied Health NDIS Behaviour Support Specialist.'
-  );
-
-  if (aiText) {
-    try {
-      const jsonMatch = aiText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        return {
-          subjective: parsed.subjective || parsed.situation || `Participant (${clientName}) presented for session. ${rawNotes}`,
-          objective: parsed.objective || parsed.intervention || `Observed direct clinical intervention.`,
-          assessment: parsed.assessment || parsed.progress || `Progress evaluated against NDIS plan goals.`,
-          plan: parsed.plan || `Continue scheduled sessions and review visual schedule.`
-        };
+export const suggestGoalsFromABC = async (abcLogs: any[]): Promise<SuggestedNDISGoal[]> => {
+  if (!abcLogs || abcLogs.length === 0) {
+    return [
+      {
+        id: `g-sugg-${Date.now()}-1`,
+        title: 'Establish foundational emotional regulation strategies during daily transitions',
+        category: 'Capacity Building',
+        targetDate: '2026-12-31',
+        progressPercent: 0,
+        status: 'In Progress',
+        gasScore: -1
       }
-    } catch {
-      // Fall through to heuristic engine
-    }
+    ];
   }
 
-  // Heuristic Engine Fallback
-  const soap = generateAISOAPNote(rawNotes, clientName);
-  return {
-    subjective: soap.subjective,
-    objective: soap.objective,
-    assessment: soap.assessment,
-    plan: soap.plan,
-    situation: `Participant (${clientName}) engaged in consultation: ${rawNotes || 'Regular PBS session completed.'}`,
-    intervention: soap.objective,
-    progress: soap.assessment
-  };
+  const functions = abcLogs.map((l) => l.perceivedFunction);
+  const topFunction = functions.includes('Escape/Avoidance')
+    ? 'Escape/Avoidance'
+    : functions.includes('Tangible/Access')
+    ? 'Tangible/Access'
+    : functions.includes('Sensory/Automatic')
+    ? 'Sensory/Automatic'
+    : 'Attention/Social';
+
+  const goals: SuggestedNDISGoal[] = [];
+  if (topFunction === 'Escape/Avoidance') {
+    goals.push({
+      id: `g-sugg-escape-${Date.now()}`,
+      title: 'Master functional communication break-request cards to replace task avoidance agitation',
+      category: 'Capacity Building',
+      targetDate: '2026-12-31',
+      progressPercent: 10,
+      status: 'In Progress',
+      gasScore: -1
+    });
+  } else if (topFunction === 'Tangible/Access') {
+    goals.push({
+      id: `g-sugg-tangible-${Date.now()}`,
+      title: 'Utilize visual schedule timer to tolerate delayed access to preferred sensory items',
+      category: 'Core',
+      targetDate: '2026-11-30',
+      progressPercent: 15,
+      status: 'In Progress',
+      gasScore: 0
+    });
+  } else {
+    goals.push({
+      id: `g-sugg-sensory-${Date.now()}`,
+      title: 'Independently access sensory decompression quiet zones prior to physiological escalation',
+      category: 'Capacity Building',
+      targetDate: '2026-12-31',
+      progressPercent: 20,
+      status: 'In Progress',
+      gasScore: 0
+    });
+  }
+
+  return goals;
+};
+
+export const queryCommandCenterAI = async (
+  question: string,
+  liveContext: LiveMetricsContext
+): Promise<string> => {
+  const q = (question || '').toLowerCase();
+  const { clients = [], claims = [], practitioners = [], restrictivePractices = [] } = liveContext;
+
+  const activeClientsCount = clients.filter((c: any) => c.status === 'Active').length;
+  const totalRevenue = claims
+    .filter((c: any) => c.status === 'Paid' || c.status === 'Approved' || c.status === 'Submitted PACE')
+    .reduce((sum: number, c: any) => sum + (c.totalAmount || 0), 0);
+  const expiringScreenings = practitioners.filter(
+    (p: any) => p.screeningStatus === 'Expiring Soon' || p.screeningStatus === 'Expired'
+  ).length;
+  const overdueRP = restrictivePractices.filter((rp: any) => rp.monthlyReportStatus === 'Overdue').length;
+
+  if (q.includes('how many clients') || q.includes('active clients') || q.includes('client count')) {
+    return `Breakthrough OS currently has ${activeClientsCount} active participant${activeClientsCount === 1 ? '' : 's'} enrolled in clinical programs across all practitioners.`;
+  }
+
+  if (q.includes('revenue') || q.includes('billing') || q.includes('total claims')) {
+    return `Total revenue across submitted, approved, and paid claims currently stands at $${totalRevenue.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.`;
+  }
+
+  if (q.includes('compliance') || q.includes('screening') || q.includes('practitioner')) {
+    return `Compliance Alert Summary: ${expiringScreenings} practitioner screening(s) requiring renewal and ${overdueRP} overdue restrictive practice reduction report(s).`;
+  }
+
+  return `Command Center Telemetry: Managing ${activeClientsCount} active clients, $${totalRevenue.toFixed(2)} in total billing claims, and ${expiringScreenings} compliance alerts flagged for director review.`;
 };
 
 /**

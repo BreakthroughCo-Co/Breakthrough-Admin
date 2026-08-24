@@ -670,20 +670,29 @@ export const ClientsModule: React.FC = () => {
                 </p>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-                <button
-                  onClick={() => setIsIntakeWizardOpen(true)}
-                  className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs rounded-xl shadow-md transition-all inline-flex items-center gap-2"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Launch Intake Questionnaire Wizard</span>
-                </button>
-                <button
-                  onClick={() => setIsDatabaseManagerOpen(true)}
-                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl border border-slate-700 transition-all inline-flex items-center gap-2"
-                >
-                  <Upload className="w-4 h-4 text-teal-400" />
-                  <span>Import Roster (CSV)</span>
-                </button>
+                {!isViewer && (
+                  <button
+                    onClick={() => setIsIntakeWizardOpen(true)}
+                    className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs rounded-xl shadow-md transition-all inline-flex items-center gap-2"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>Launch Intake Questionnaire Wizard</span>
+                  </button>
+                )}
+                {isAdmin && (
+                  <button
+                    onClick={() => setIsDatabaseManagerOpen(true)}
+                    className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl border border-slate-700 transition-all inline-flex items-center gap-2"
+                  >
+                    <Upload className="w-4 h-4 text-teal-400" />
+                    <span>Import Roster (CSV)</span>
+                  </button>
+                )}
+                {isViewer && (
+                  <p className="text-xs text-slate-500 italic">
+                    Read-only view. Adding participants requires practitioner or administrator privileges.
+                  </p>
+                )}
               </div>
             </div>
           )}

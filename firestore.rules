@@ -31,6 +31,19 @@ service cloud.firestore {
         : null;
     }
 
+    function isViewer() {
+      return isSignedIn() && (
+        getUserRole() == 'VIEWER' ||
+        getUserRole() == 'viewer' ||
+        request.auth.token.role == 'VIEWER' ||
+        request.auth.token.role == 'viewer'
+      );
+    }
+
+    function canWrite() {
+      return isSignedIn() && !isViewer();
+    }
+
     function isAdmin() {
       return isSignedIn() && (
         getUserRole() == 'ADMIN' ||
@@ -83,8 +96,8 @@ service cloud.firestore {
     // ==========================================
     match /clients/{clientId} {
       allow read: if isSignedIn();
-      allow create, update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow create, update: if canWrite();
+      allow delete: if isAdmin();
     }
 
     // ==========================================
@@ -92,7 +105,9 @@ service cloud.firestore {
     // ==========================================
     match /caseNotes/{noteId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+      allow create: if canWrite();
+      allow update: if canWrite() && (isAdmin() || request.auth.uid == resource.data.authorId);
+      allow delete: if isAdmin() || (canWrite() && request.auth.uid == resource.data.authorId);
     }
 
     // ==========================================
@@ -100,7 +115,8 @@ service cloud.firestore {
     // ==========================================
     match /billingClaims/{claimId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+      allow create, update: if canWrite();
+      allow delete: if isAdmin();
     }
 
     // ==========================================
@@ -108,7 +124,8 @@ service cloud.firestore {
     // ==========================================
     match /incidents/{incidentId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+      allow create, update: if canWrite();
+      allow delete: if isAdmin();
     }
 
     // ==========================================
@@ -116,7 +133,8 @@ service cloud.firestore {
     // ==========================================
     match /restrictivePractices/{practiceId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+      allow create, update: if canWrite();
+      allow delete: if isAdmin();
     }
 
     // ==========================================
@@ -124,7 +142,8 @@ service cloud.firestore {
     // ==========================================
     match /abcLogs/{logId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+      allow create, update: if canWrite();
+      allow delete: if isAdmin();
     }
 
     // ==========================================
@@ -132,7 +151,8 @@ service cloud.firestore {
     // ==========================================
     match /bspDocuments/{documentId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+      allow create, update: if canWrite();
+      allow delete: if isAdmin();
     }
 
     // ==========================================
@@ -140,12 +160,14 @@ service cloud.firestore {
     // ==========================================
     match /crmLeads/{leadId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+      allow create, update: if canWrite();
+      allow delete: if isAdmin();
     }
 
     match /leads/{leadId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+      allow create, update: if canWrite();
+      allow delete: if isAdmin();
     }
 
     // ==========================================
@@ -153,7 +175,8 @@ service cloud.firestore {
     // ==========================================
     match /crmTasks/{taskId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+      allow create, update: if canWrite();
+      allow delete: if isAdmin();
     }
 
     // ==========================================
@@ -161,7 +184,7 @@ service cloud.firestore {
     // ==========================================
     match /practitioners/{practitionerId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
 
     // ==========================================
@@ -186,7 +209,8 @@ service cloud.firestore {
     // ==========================================
     match /scheduledShifts/{shiftId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+      allow create, update: if canWrite();
+      allow delete: if isAdmin();
     }
 
     // ==========================================

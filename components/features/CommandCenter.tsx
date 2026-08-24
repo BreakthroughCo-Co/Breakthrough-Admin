@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { useManagementStore, TabType } from '@/stores/useManagementStore';
 import { Client, RestrictivePractice, Incident, BillingClaim, AuditLog, Practitioner } from '@/types';
+import { queryCommandCenterAI } from '@/lib/ai-assistant';
 import { DueForReviewSummaryWidget } from '@/components/features/DueForReviewSummaryWidget';
 import { QuickActionsFloatingMenu } from '@/components/features/QuickActionsFloatingMenu';
 import {
@@ -42,7 +43,10 @@ import {
   Maximize2,
   Eye,
   Flame,
-  Radio
+  Radio,
+  Send,
+  Bot,
+  User
 } from 'lucide-react';
 
 export const CommandCenter: React.FC = () => {
@@ -62,6 +66,18 @@ export const CommandCenter: React.FC = () => {
   const [alertFilter, setAlertFilter] = useState<'ALL' | 'AUDIT' | 'CLIENT_REVIEW' | 'HR_TASK' | 'CRITICAL'>('ALL');
   const [alertSearchTerm, setAlertSearchTerm] = useState('');
   const [dismissedIds, setDismissedIds] = useState<string[]>([]);
+
+  // AI Live Command Center Chat State
+  const [showAiChat, setShowAiChat] = useState(false);
+  const [aiQuestion, setAiQuestion] = useState('');
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiChatHistory, setAiChatHistory] = useState<Array<{ sender: 'user' | 'ai'; text: string; time: string }>>([
+    {
+      sender: 'ai',
+      text: 'Hello! I am your NDIS Practice AI Assistant. Ask me about active participant counts, billing revenue, practitioner screening expiries, or compliance metrics in real time.',
+      time: 'Just now'
+    }
+  ]);
 
   // Floating Incident Summary Widget State
   const [isIncidentWidgetOpen, setIsIncidentWidgetOpen] = useState(true);
@@ -623,6 +639,15 @@ export const CommandCenter: React.FC = () => {
 
         <div className="flex items-center gap-2 flex-wrap">
           <button
+            onClick={() => setShowAiChat(!showAiChat)}
+            className="px-3.5 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 shrink-0"
+            title="Ask AI questions with live metrics context"
+          >
+            <Sparkles className="w-4 h-4 text-amber-300" />
+            <span>{showAiChat ? 'Close AI Assistant' : 'Live AI Practice Assistant'}</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('bsp-plans')}
             className="px-3.5 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 shrink-0"
           >
@@ -631,6 +656,182 @@ export const CommandCenter: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Live AI Command Center Chat Drawer */}
+      {showAiChat && (
+        <div className="bg-slate-900 border border-teal-500/30 rounded-2xl p-5 shadow-xl space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 bg-teal-500/20 text-teal-400 rounded-xl">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Live AI Command Center Assistant</h3>
+                <p className="text-[11px] text-slate-400">Context-aware natural language queries over live Firestore telemetry</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowAiChat(false)}
+              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Quick Query Pills */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] text-slate-400">Suggested queries:</span>
+            <button
+              onClick={async () => {
+                const q = 'How many clients are active?';
+                const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                setAiChatHistory((prev) => [...prev, { sender: 'user', text: q, time: timeNow }]);
+                setIsAiLoading(true);
+                const resp = await queryCommandCenterAI(q, {
+                  clients,
+                  claims: billingClaims,
+                  practitioners,
+                  restrictivePractices,
+                  incidents
+                });
+                setAiChatHistory((prev) => [
+                  ...prev,
+                  { sender: 'ai', text: resp, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+                ]);
+                setIsAiLoading(false);
+              }}
+              className="text-[11px] bg-slate-950 hover:bg-slate-800 text-teal-300 px-2.5 py-1 rounded-lg border border-slate-800 transition-colors"
+            >
+              How many clients are active?
+            </button>
+            <button
+              onClick={async () => {
+                const q = 'What is total billing revenue?';
+                const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                setAiChatHistory((prev) => [...prev, { sender: 'user', text: q, time: timeNow }]);
+                setIsAiLoading(true);
+                const resp = await queryCommandCenterAI(q, {
+                  clients,
+                  claims: billingClaims,
+                  practitioners,
+                  restrictivePractices,
+                  incidents
+                });
+                setAiChatHistory((prev) => [
+                  ...prev,
+                  { sender: 'ai', text: resp, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+                ]);
+                setIsAiLoading(false);
+              }}
+              className="text-[11px] bg-slate-950 hover:bg-slate-800 text-teal-300 px-2.5 py-1 rounded-lg border border-slate-800 transition-colors"
+            >
+              What is total billing revenue?
+            </button>
+            <button
+              onClick={async () => {
+                const q = 'Show compliance and screening status';
+                const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                setAiChatHistory((prev) => [...prev, { sender: 'user', text: q, time: timeNow }]);
+                setIsAiLoading(true);
+                const resp = await queryCommandCenterAI(q, {
+                  clients,
+                  claims: billingClaims,
+                  practitioners,
+                  restrictivePractices,
+                  incidents
+                });
+                setAiChatHistory((prev) => [
+                  ...prev,
+                  { sender: 'ai', text: resp, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+                ]);
+                setIsAiLoading(false);
+              }}
+              className="text-[11px] bg-slate-950 hover:bg-slate-800 text-teal-300 px-2.5 py-1 rounded-lg border border-slate-800 transition-colors"
+            >
+              Show compliance and screening status
+            </button>
+          </div>
+
+          {/* Chat Messages */}
+          <div className="max-h-64 overflow-y-auto space-y-2.5 p-3 bg-slate-950 rounded-xl border border-slate-800">
+            {aiChatHistory.map((msg, idx) => (
+              <div
+                key={idx}
+                className={`flex gap-2.5 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                {msg.sender === 'ai' && (
+                  <div className="w-6 h-6 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center shrink-0 text-xs">
+                    <Bot className="w-3.5 h-3.5" />
+                  </div>
+                )}
+                <div
+                  className={`p-3 rounded-xl text-xs max-w-[80%] leading-relaxed ${
+                    msg.sender === 'user'
+                      ? 'bg-teal-600 text-white rounded-br-none'
+                      : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-none'
+                  }`}
+                >
+                  <p>{msg.text}</p>
+                  <span className="text-[9px] opacity-60 block mt-1 text-right">{msg.time}</span>
+                </div>
+                {msg.sender === 'user' && (
+                  <div className="w-6 h-6 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center shrink-0 text-xs">
+                    <User className="w-3.5 h-3.5" />
+                  </div>
+                )}
+              </div>
+            ))}
+            {isAiLoading && (
+              <div className="flex items-center gap-2 text-xs text-teal-400 p-2">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <span>Analysing live telemetry and compiling insights...</span>
+              </div>
+            )}
+          </div>
+
+          {/* Chat Input */}
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!aiQuestion.trim() || isAiLoading) return;
+              const q = aiQuestion.trim();
+              const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              setAiChatHistory((prev) => [...prev, { sender: 'user', text: q, time: timeNow }]);
+              setAiQuestion('');
+              setIsAiLoading(true);
+              const resp = await queryCommandCenterAI(q, {
+                clients,
+                claims: billingClaims,
+                practitioners,
+                restrictivePractices,
+                incidents
+              });
+              setAiChatHistory((prev) => [
+                ...prev,
+                { sender: 'ai', text: resp, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+              ]);
+              setIsAiLoading(false);
+            }}
+            className="flex gap-2"
+          >
+            <input
+              type="text"
+              value={aiQuestion}
+              onChange={(e) => setAiQuestion(e.target.value)}
+              placeholder="Ask a question about active clients, total revenue, compliance, or caseloads..."
+              className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-teal-500"
+            />
+            <button
+              type="submit"
+              disabled={isAiLoading || !aiQuestion.trim()}
+              className="px-4 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Send</span>
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* High-Level Metric Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
