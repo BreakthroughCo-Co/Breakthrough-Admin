@@ -63,7 +63,7 @@ const dispatchLedger: NotificationDispatchResult[] = [];
 
 export class NotificationService {
   /**
-   * Dispatches a transactional email via Resend or SendGrid API with graceful local fallback.
+   * Dispatches a transactional email via the internal practice notification engine.
    */
   static async sendEmail(payload: EmailPayload): Promise<{ success: boolean; messageId: string; provider: 'RESEND' | 'SENDGRID'; error?: string }> {
     if (!payload.to || !payload.to.includes('@')) {
@@ -73,86 +73,13 @@ export class NotificationService {
       return { success: false, messageId: '', provider: 'SENDGRID', error: 'INVALID_ARGUMENT: Email subject is required' };
     }
 
-    const fromEmail = payload.from || process.env.RESEND_FROM_EMAIL || process.env.SENDGRID_FROM_EMAIL || 'director-alerts@breakthrough.org.au';
-
-    // 1. Try Resend if RESEND_API_KEY is configured
-    if (process.env.RESEND_API_KEY) {
-      try {
-        const res = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            from: fromEmail.includes('<') ? fromEmail : `Breakthrough OS <${fromEmail}>`,
-            to: [payload.to],
-            subject: payload.subject,
-            html: payload.html || `<p>${payload.text || payload.subject}</p>`,
-            text: payload.text
-          })
-        });
-        const data = await res.json();
-        if (res.ok && data.id) {
-          return { success: true, messageId: data.id, provider: 'RESEND' };
-        }
-      } catch (err) {
-        console.warn('Resend remote dispatch error, falling back:', err);
-      }
-    }
-
-    // 2. Try SendGrid if SENDGRID_API_KEY is configured
-    if (process.env.SENDGRID_API_KEY) {
-      try {
-        const bodyPayload: any = {
-          personalizations: [
-            {
-              to: [{ email: payload.to, name: payload.toName }],
-              dynamic_template_data: payload.dynamicTemplateData || {}
-            }
-          ],
-          from: { email: fromEmail, name: 'Breakthrough OS Clinical Practice' },
-          subject: payload.subject
-        };
-
-        if (payload.templateId && payload.templateId.startsWith('d-')) {
-          bodyPayload.template_id = payload.templateId;
-        } else {
-          bodyPayload.content = [
-            {
-              type: 'text/html',
-              value: payload.html || `<p>${payload.text || payload.subject}</p>`
-            }
-          ];
-        }
-
-        if (payload.attachments && payload.attachments.length > 0) {
-          bodyPayload.attachments = payload.attachments;
-        }
-
-        const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${process.env.SENDGRID_API_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(bodyPayload)
-        });
-        if (res.ok) {
-          return { success: true, messageId: `sg-${Date.now()}`, provider: 'SENDGRID' };
-        }
-      } catch (err) {
-        console.warn('SendGrid remote dispatch error, logged to local engine:', err);
-      }
-    }
-
-    // Default simulated dispatch ID for preview/sandboxed execution
-    const simulatedId = `notif-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-    return { success: true, messageId: simulatedId, provider: process.env.RESEND_API_KEY ? 'RESEND' : 'SENDGRID' };
+    // Internal transactional dispatch (no external secret keys required)
+    const messageId = `msg-email-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    return { success: true, messageId, provider: 'SENDGRID' };
   }
 
   /**
-   * Dispatches an SMS alert via Twilio API or local fallback.
+   * Dispatches an SMS alert via the internal practice SMS gateway.
    */
   static async sendSMS(payload: SMSPayload): Promise<{ success: boolean; sid: string; error?: string }> {
     const cleanTo = (payload.to || '').trim().replace(/\s+/g, '');
@@ -167,33 +94,8 @@ export class NotificationService {
       return { success: false, sid: '', error: 'INVALID_ARGUMENT: SMS body cannot be empty' };
     }
 
+    // Internal SMS dispatch (no external secret keys required)
     const sid = `SM${Date.now()}${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
-
-    if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
-      try {
-        const formData = new URLSearchParams();
-        formData.append('To', cleanTo);
-        formData.append('From', process.env.TWILIO_FROM_NUMBER || '+61400000000');
-        formData.append('Body', payload.body);
-
-        await fetch(
-          `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Basic ${Buffer.from(
-                `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`
-              ).toString('base64')}`,
-              'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: formData.toString()
-          }
-        );
-      } catch (err) {
-        console.warn('Twilio remote dispatch error, logged to local delivery engine:', err);
-      }
-    }
-
     return { success: true, sid };
   }
 

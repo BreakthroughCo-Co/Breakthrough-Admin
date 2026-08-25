@@ -241,7 +241,7 @@ export const IntegrationsModule: React.FC = () => {
       {/* Integration Services Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
-        {/* 1. NDIS PRODA & PACE */}
+        {/* 1. NDIS PRODA PACE API */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -250,13 +250,17 @@ export const IntegrationsModule: React.FC = () => {
                 NDIS PRODA & PACE API
               </span>
               <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold px-2 py-0.5 rounded font-mono flex items-center gap-1">
-                <Check className="w-3 h-3" /> Operational
+                <Check className="w-3 h-3" /> Dummy Keys Active
               </span>
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              Real-time claim submission, participant budget check, service agreement sync & BSP portal submission.
+              Real-time claim submission, participant budget check, service agreement sync & PACE automated ledger reconciliation.
             </p>
             <div className="bg-slate-950 p-2 rounded border border-slate-800 text-[10px] font-mono space-y-1">
+              <div className="flex justify-between text-slate-400">
+                <span>Client ID:</span>
+                <span className="text-white font-bold font-mono text-[9px]">DUMMY_PRODA_CLIENT_405001234</span>
+              </div>
               <div className="flex justify-between text-slate-400">
                 <span>Org Reg Number:</span>
                 <span className="text-white font-bold">PR-9988120</span>
@@ -266,8 +270,8 @@ export const IntegrationsModule: React.FC = () => {
                 <span className="text-teal-400 font-bold">{statusState.proda.latency} ms</span>
               </div>
               <div className="flex justify-between text-slate-400">
-                <span>Last Sync:</span>
-                <span className="text-slate-300">{statusState.proda.lastSync}</span>
+                <span>Keystore:</span>
+                <span className="text-slate-300 font-mono text-[9px]">/etc/proda/dummy_keystore.p12</span>
               </div>
             </div>
           </div>
@@ -341,29 +345,29 @@ export const IntegrationsModule: React.FC = () => {
           </div>
         </div>
 
-        {/* 3. SendGrid Email & Twilio SMS */}
+        {/* 3. Practice Notification Engine (Email & SMS) */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-white flex items-center gap-2">
                 <Mail className="w-4 h-4 text-emerald-400" />
-                SendGrid & Twilio Gateway
+                Practice Notification Engine (Email & SMS)
               </span>
               <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold px-2 py-0.5 rounded font-mono flex items-center gap-1">
-                <Check className="w-3 h-3" /> 100% Delivery
+                <Check className="w-3 h-3" /> Built-in
               </span>
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              Automated staff screening expiry emails, Twilio SMS appointment reminders & reportable incident alerts.
+              Automated staff screening expiry emails, participant appointment reminders & reportable incident alerts.
             </p>
             <div className="bg-slate-950 p-2 rounded border border-slate-800 text-[10px] font-mono space-y-1">
               <div className="flex justify-between text-slate-400">
-                <span>Gateway Route:</span>
-                <span className="text-white font-bold">Dedicated TLS Proxy</span>
+                <span>Engine Mode:</span>
+                <span className="text-white font-bold">Native Practice Dispatch</span>
               </div>
               <div className="flex justify-between text-slate-400">
-                <span>SendGrid / Twilio:</span>
-                <span className="text-emerald-400 font-bold">{statusState.sendgrid.latency}ms / {statusState.twilio.latency}ms</span>
+                <span>Secret Key Requirement:</span>
+                <span className="text-emerald-400 font-bold">None (Pre-configured)</span>
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>Last Dispatched:</span>
@@ -374,7 +378,7 @@ export const IntegrationsModule: React.FC = () => {
 
           <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2">
             <button
-              onClick={() => handleTestGateway('SendGrid Mail', '/v3/mail/send/test')}
+              onClick={() => handleTestGateway('Practice Notifications', '/api/notifications/email')}
               className="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 font-bold text-[11px] rounded border border-slate-700 text-center transition-all"
             >
               Test Notification Dispatch

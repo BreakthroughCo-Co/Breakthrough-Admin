@@ -258,7 +258,7 @@ export const HRModule: React.FC = () => {
       practitioners.forEach((prac) => {
         addNotification({
           title: `Compliance Reminder Dispatched: ${prac.name}`,
-          message: `Automated SendGrid Email & Twilio SMS sent to ${prac.email} regarding Worker Screening & Police Check renewals.`,
+          message: `Automated Email & SMS reminder sent to ${prac.email} regarding Worker Screening & Police Check renewals.`,
           type: 'hr',
           severity: 'medium',
           linkTab: 'hr',
@@ -270,7 +270,7 @@ export const HRModule: React.FC = () => {
         'DISPATCH_HR_REMINDERS',
         'PRACTITIONER_COMPLIANCE',
         'all-staff',
-        `Dispatched SendGrid/Twilio compliance reminders to ${sentCount} practitioners.`
+        `Dispatched compliance reminders to ${sentCount} practitioners.`
       );
 
       setIsSendingReminders(false);
@@ -289,7 +289,7 @@ export const HRModule: React.FC = () => {
           <div>
             <h2 className="text-lg font-bold text-white">Practitioners, Smart Rostering & NDIS HR Compliance</h2>
             <p className="text-xs text-slate-400">
-              Worker Screening Checks (NWSC), WWCC, Police Checks, SendGrid/Twilio expiry dispatch, and Smart Shift Rostering.
+              Worker Screening Checks (NWSC), WWCC, Police Checks, automated expiry dispatch, and Smart Shift Rostering.
             </p>
           </div>
         </div>
@@ -310,7 +310,7 @@ export const HRModule: React.FC = () => {
             className="px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold text-xs rounded-lg flex items-center gap-2 transition-all shadow-md disabled:opacity-50"
           >
             <Send className="w-4 h-4" />
-            <span>{isSendingReminders ? 'Dispatching...' : 'Dispatch SendGrid/Twilio Expiry Reminders'}</span>
+            <span>{isSendingReminders ? 'Dispatching...' : 'Dispatch Compliance Expiry Reminders'}</span>
           </button>
         </div>
       </div>

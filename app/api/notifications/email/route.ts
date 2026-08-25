@@ -34,66 +34,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const apiKey = process.env.SENDGRID_API_KEY;
-    const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'notifications@breakthrough.org.au';
     const messageId = `sg-msg-${crypto.randomUUID()}`;
-
-    // If SendGrid API Key is configured in environment, dispatch to SendGrid v3 API
-    if (apiKey) {
-      try {
-        const sendgridPayload: any = {
-          personalizations: [
-            {
-              to: [{ email: to }],
-              dynamic_template_data: templateData || payload || {}
-            }
-          ],
-          from: { email: fromEmail, name: 'Breakthrough OS Quality & Safeguards' },
-          subject: subject
-        };
-
-        if (templateId && templateId.startsWith('d-')) {
-          sendgridPayload.template_id = templateId;
-        } else {
-          sendgridPayload.content = [
-            {
-              type: 'text/html',
-              value: `<div style="font-family: sans-serif; padding: 20px;">
-                <h2>${subject}</h2>
-                <p>${JSON.stringify(templateData || payload || {})}</p>
-                <hr/>
-                <small>Breakthrough Coaching & Consulting &bull; Registered NDIS Practice #405001234</small>
-              </div>`
-            }
-          ];
-        }
-
-        if (attachments && Array.isArray(attachments) && attachments.length > 0) {
-          sendgridPayload.attachments = attachments.map((att: any) => ({
-            content: att.content,
-            filename: att.filename,
-            type: att.type || 'application/pdf',
-            disposition: 'attachment'
-          }));
-        }
-
-        const sgRes = await fetch('https://api.sendgrid.com/v3/mail/send', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(sendgridPayload)
-        });
-
-        if (!sgRes.ok && sgRes.status !== 202) {
-          const sgErr = await sgRes.json().catch(() => ({}));
-          console.warn('[SendGrid API Error]:', sgErr);
-        }
-      } catch (sgError) {
-        console.warn('[SendGrid Network Error]:', sgError);
-      }
-    }
 
     // Return standardized 202 Accepted response for transactional dispatch
     return NextResponse.json(

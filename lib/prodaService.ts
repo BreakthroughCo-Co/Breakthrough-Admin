@@ -7,11 +7,27 @@
 
 import { BillingClaim, ProdaBatchSubmission, ProdaProcessedClaim } from '@/types';
 
+// Default pre-configured dummy PRODA credentials for sandbox testing
+export const DUMMY_PRODA_CONFIG = {
+  clientId: process.env.NDIS_PRODA_CLIENT_ID || 'DUMMY_PRODA_CLIENT_405001234',
+  keystorePath: process.env.NDIS_PRODA_KEYSTORE_PATH || '/etc/proda/dummy_keystore.p12',
+  deviceName: process.env.NDIS_PRODA_DEVICE_NAME || 'PRODA_DEV_DEVICE_01',
+  orgId: process.env.NDIS_PRODA_ORG_ID || 'PR-9988120',
+  providerRegNumber: '405001234',
+  environment: 'PRODA_SANDBOX_MOCK'
+};
+
 // In-memory persistent batch store (for development & runtime session across API routes)
 const batchStore = new Map<string, ProdaBatchSubmission>();
 let batchCounter = 1000;
 
 export class NDISProdaApiService {
+  /**
+   * Retrieves active dummy PRODA configuration for current practice environment.
+   */
+  static getProdaConfig() {
+    return { ...DUMMY_PRODA_CONFIG };
+  }
   /**
    * Dispatches a batch of claims directly to NDIS PRODA PACE endpoint.
    */

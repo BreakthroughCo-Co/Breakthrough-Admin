@@ -35,39 +35,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const fromNumber = process.env.TWILIO_FROM_NUMBER || '+61400000000';
     const sid = `SM${crypto.randomUUID().replace(/-/g, '').slice(0, 32)}`;
-
-    // If Twilio credentials are configured in environment, dispatch to Twilio Messages API
-    if (accountSid && authToken) {
-      try {
-        const formData = new URLSearchParams();
-        formData.append('To', cleanTo);
-        formData.append('From', fromNumber);
-        formData.append('Body', body);
-
-        const twilioRes = await fetch(
-          `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`,
-              'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: formData.toString()
-          }
-        );
-
-        if (!twilioRes.ok) {
-          const twErr = await twilioRes.json().catch(() => ({}));
-          console.warn('[Twilio API Error]:', twErr);
-        }
-      } catch (twError) {
-        console.warn('[Twilio Network Error]:', twError);
-      }
-    }
 
     return NextResponse.json(
       {
