@@ -92,13 +92,14 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if isOwner(userId) || (isSignedIn() && !isParticipant());
       allow list: if isSignedIn() && !isParticipant();
-      allow create: if (isOwner(userId) && !isParticipant()) || isAdmin();
-      allow update: if (isOwner(userId) && !isParticipant() && (!('role' in request.resource.data) || request.resource.data.role == resource.data.role || isAdmin())) || isAdmin();
+      allow create: if (isOwner(userId) && !isParticipant() && !isViewer()) || isAdmin();
+      allow update: if (isOwner(userId) && !isParticipant() && !isViewer() && (!('role' in request.resource.data) || request.resource.data.role == resource.data.role || isAdmin())) || isAdmin();
       allow delete: if isAdmin();
 
       // Google Keep user-owned notes and checklists
       match /keepNotes/{noteId} {
-        allow read, write: if (isOwner(userId) && !isParticipant()) || isAdmin();
+        allow read: if (isOwner(userId) && !isParticipant()) || isAdmin();
+        allow write: if (isOwner(userId) && canWrite()) || isAdmin();
       }
     }
 

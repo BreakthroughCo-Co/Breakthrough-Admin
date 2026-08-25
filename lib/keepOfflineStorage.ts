@@ -455,6 +455,21 @@ export async function flushOfflineKeepQueue(userId: string): Promise<{ syncedCou
 }
 
 /**
+ * Retrieve pending offline queue items (Convenience alias for PWA / Components).
+ */
+export async function getOfflineQueue(): Promise<KeepOfflineMutation[]> {
+  return getPendingIndexedDBMutations();
+}
+
+/**
+ * Flush offline mutations (Convenience alias for PWA / Components).
+ */
+export async function flushOfflineQueue(userId?: string): Promise<{ syncedCount: number; errors: number }> {
+  const targetUser = userId || (typeof window !== 'undefined' ? localStorage.getItem('breakthrough_current_user_id') || 'system_practitioner' : 'system_practitioner');
+  return flushOfflineKeepQueue(targetUser);
+}
+
+/**
  * Register Service Worker for offline field visit support.
  */
 export function registerKeepServiceWorker(): void {

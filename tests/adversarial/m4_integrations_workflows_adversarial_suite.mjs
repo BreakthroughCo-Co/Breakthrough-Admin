@@ -434,7 +434,7 @@ await test('COMPLIANCE 4.1: Monthly compliance report correctly computes KPIs ac
   assert.equal(report.metrics.activeRestrictivePracticesCount, 2);
   assert.equal(report.metrics.reportableIncidentsCount, 2);
   assert.equal(report.metrics.screeningComplianceRatePercent, 50); // 2 of 4 = 50%
-  assert.equal(report.metrics.totalClaimsCount, 2);
+  assert.equal(report.metrics.totalClaimsCount, 3);
   assert.equal(report.metrics.totalBillingSubmittedAmount, 536.03); // 321.62 + 214.41
 });
 

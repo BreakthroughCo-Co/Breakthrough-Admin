@@ -2,6 +2,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
   getAuth,
   GoogleAuthProvider,
+  OAuthProvider,
   signInWithPopup,
   signOut,
   onAuthStateChanged,
@@ -142,6 +143,17 @@ baseProvider.addScope('profile');
 baseProvider.addScope('email');
 baseProvider.addScope('openid');
 
+// Microsoft 365 / Entra ID OAuth Provider
+const microsoftProvider = new OAuthProvider('microsoft.com');
+microsoftProvider.addScope('openid');
+microsoftProvider.addScope('email');
+microsoftProvider.addScope('profile');
+microsoftProvider.addScope('User.Read');
+microsoftProvider.setCustomParameters({
+  prompt: 'select_account',
+  tenant: 'common'
+});
+
 // In-memory token storage (MANDATORY: Never store access token in localStorage/sessionStorage)
 let cachedAccessToken: string | null = null;
 
@@ -153,6 +165,18 @@ export const signInWithGoogle = async (): Promise<{ user: User; accessToken: str
     return { user: result.user, accessToken: cachedAccessToken };
   } catch (error: any) {
     console.error('Error signing in with Google:', error);
+    throw error;
+  }
+};
+
+export const signInWithMicrosoft = async (): Promise<{ user: User; accessToken: string | null }> => {
+  try {
+    const result: UserCredential = await signInWithPopup(auth, microsoftProvider);
+    const credential = OAuthProvider.credentialFromResult(result);
+    cachedAccessToken = credential?.accessToken || null;
+    return { user: result.user, accessToken: cachedAccessToken };
+  } catch (error: any) {
+    console.error('Error signing in with Microsoft:', error);
     throw error;
   }
 };

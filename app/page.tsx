@@ -64,6 +64,7 @@ export default function Page() {
     activeTab,
     setActiveTab,
     theme,
+    currentUser,
     isAuthenticated,
     authLoading,
     handleAuthUser,

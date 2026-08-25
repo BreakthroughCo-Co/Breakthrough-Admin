@@ -83,6 +83,7 @@ import {
   deleteDocument
 } from '@/lib/firestoreService';
 import { initFirestoreListeners } from '@/lib/firestoreListeners';
+import { dispatchTrigger } from '@/lib/notificationService';
 
 // Module-level cleanup handle for real-time Firestore listeners (Phase 3)
 let _firestoreListenersCleanup: (() => void) | null = null;
@@ -1892,6 +1893,15 @@ export const useManagementStore = create<ManagementState>((set, get) => ({
         newIncident.id,
         `Automated Workflow: Dispatched High/Critical incident notification to Command Center for participant ${newIncident.clientName}`
       );
+
+      // Automated multi-channel alert dispatch (Email & SMS to Practice Director)
+      const matchingClient = get().clients.find((c) => c.id === newIncident.clientId);
+      dispatchTrigger('CRITICAL_INCIDENT', {
+        incident: newIncident,
+        client: matchingClient
+      }).catch((err) => {
+        console.warn('Automated incident notification trigger dispatch warning:', err);
+      });
     }
   },
 

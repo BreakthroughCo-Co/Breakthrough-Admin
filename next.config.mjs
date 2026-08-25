@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
+  reactStrictMode: true,
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -7,7 +9,6 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   serverExternalPackages: ['@google/genai', 'xero-node', 'express'],
-  devIndicators: false,
 };
 
 export default nextConfig;

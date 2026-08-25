@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { BSPDocument, Client } from '@/types';
 import { useManagementStore } from '@/stores/useManagementStore';
+import { exportBSPToPDF } from '@/lib/pdfGenerator';
 import {
   FileText,
   Printer,
@@ -432,11 +433,27 @@ export const BSPPDFExportModal: React.FC<BSPPDFExportModalProps> = ({
               Close
             </button>
             <button
+              onClick={() =>
+                exportBSPToPDF(bsp, client, {
+                  directorName: directorSignoff,
+                  practitionerName: practitionerSignoff,
+                  reviewDate: reviewDate,
+                  restrictivePractices: clientRestrictive,
+                  abcLogs: clientAbcLogs,
+                  goals: clientGoals
+                })
+              }
+              className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-md transition-all"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download PDF (jsPDF)</span>
+            </button>
+            <button
               onClick={handlePrint}
               className="px-4 py-1.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-md transition-all"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print / Export PDF Document</span>
+              <span>Print Preview</span>
             </button>
           </div>
         </div>

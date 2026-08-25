@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Download,
   Wifi,
@@ -21,6 +21,39 @@ export const PWAInstallPrompt: React.FC = () => {
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+
+  const checkQueue = useCallback(async () => {
+    try {
+      const queue = await getOfflineQueue();
+      setPendingSyncCount(queue.length);
+    } catch {
+      // IndexedDB not ready
+    }
+  }, []);
+
+  const handleManualSync = useCallback(async () => {
+    if (isSyncing || !navigator.onLine) return;
+    setIsSyncing(true);
+    try {
+      await flushOfflineQueue();
+      await checkQueue();
+    } catch (err) {
+      console.warn('Sync error:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [isSyncing, checkQueue]);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setIsInstalled(true);
+      setIsInstallable(false);
+    }
+    setDeferredPrompt(null);
+  };
 
   useEffect(() => {
     // Check initial online status
@@ -61,40 +94,7 @@ export const PWAInstallPrompt: React.FC = () => {
         clearInterval(interval);
       };
     }
-  }, []);
-
-  const checkQueue = async () => {
-    try {
-      const queue = await getOfflineQueue();
-      setPendingSyncCount(queue.length);
-    } catch {
-      // IndexedDB not ready
-    }
-  };
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setIsInstalled(true);
-      setIsInstallable(false);
-    }
-    setDeferredPrompt(null);
-  };
-
-  const handleManualSync = async () => {
-    if (isSyncing || !navigator.onLine) return;
-    setIsSyncing(true);
-    try {
-      await flushOfflineQueue();
-      await checkQueue();
-    } catch (err) {
-      console.warn('Sync error:', err);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
+  }, [handleManualSync, checkQueue]);
 
   if (dismissed) return null;
 

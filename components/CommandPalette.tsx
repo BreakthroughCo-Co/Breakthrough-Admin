@@ -25,6 +25,8 @@ import {
   BarChart3
 } from 'lucide-react';
 
+const ADMIN_TABS: TabType[] = ['hr-roster', 'audit-logs', 'integrations'];
+
 export const CommandPalette: React.FC = () => {
   const {
     isCommandPaletteOpen,
@@ -46,7 +48,6 @@ export const CommandPalette: React.FC = () => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const adminTabs: TabType[] = ['hr-roster', 'audit-logs', 'integrations'];
   const isAdminUser = currentUser?.role === 'ADMIN';
 
   // Keyboard shortcut Ctrl+K or Cmd+K listener
@@ -92,7 +93,7 @@ export const CommandPalette: React.FC = () => {
 
     if (isAdminUser) return rawResults;
 
-    return rawResults.filter((r) => !adminTabs.includes(r.targetTab));
+    return rawResults.filter((r) => !ADMIN_TABS.includes(r.targetTab));
   }, [query, selectedCategory, clients, caseNotes, practitioners, billingClaims, incidents, restrictivePractices, abcLogs, isAdminUser]);
 
   // Reset selected index when query or category changes
@@ -101,7 +102,7 @@ export const CommandPalette: React.FC = () => {
   }, [query, selectedCategory]);
 
   const handleNavigate = (tab: TabType, entityId?: string, category?: string) => {
-    if (adminTabs.includes(tab) && !isAdminUser) {
+    if (ADMIN_TABS.includes(tab) && !isAdminUser) {
       return;
     }
     if (category === 'CLIENT' && entityId) {
