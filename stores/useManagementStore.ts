@@ -163,6 +163,7 @@ export type TabType =
   | 'practice-tools'
   | 'google-workspace'
   | 'google-keep'
+  | 'google-classroom'
   | 'audit'
   | 'crm'
   | 'billing'

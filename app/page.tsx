@@ -25,6 +25,7 @@ import { BSPModule } from '@/components/features/BSPModule';
 import { PracticeToolsModule } from '@/components/features/PracticeToolsModule';
 import { GoogleWorkspaceHub } from '@/components/features/GoogleWorkspaceHub';
 import { GoogleKeepModule } from '@/components/features/GoogleKeepModule';
+import { GoogleClassroomModule } from '@/components/features/GoogleClassroomModule';
 import { ComplianceDashboard } from '@/components/features/ComplianceDashboard';
 import { CRMModule } from '@/components/features/CRMModule';
 import { BillingModule } from '@/components/features/BillingModule';
@@ -223,6 +224,8 @@ export default function Page() {
         return <GoogleWorkspaceHub />;
       case 'google-keep':
         return <GoogleKeepModule />;
+      case 'google-classroom':
+        return <GoogleClassroomModule />;
       case 'audit':
         return <ComplianceDashboard />;
       case 'crm':

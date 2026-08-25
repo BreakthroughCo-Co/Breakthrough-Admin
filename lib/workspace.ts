@@ -111,6 +111,67 @@ export interface GoogleKeepNote {
   trashed?: boolean;
 }
 
+export interface GoogleClassroomCourse {
+  id: string;
+  name: string;
+  section?: string;
+  descriptionHeading?: string;
+  description?: string;
+  room?: string;
+  ownerId?: string;
+  creationTime?: string;
+  updateTime?: string;
+  enrollmentCode?: string;
+  courseState?: 'ACTIVE' | 'ARCHIVED' | 'PROVISIONED' | 'DECLINED' | 'SUSPENDED';
+  alternateLink?: string;
+  teacherGroupEmail?: string;
+  courseGroupEmail?: string;
+  guardiansEnabled?: boolean;
+  calendarId?: string;
+}
+
+export interface GoogleClassroomCourseWork {
+  id: string;
+  courseId: string;
+  title: string;
+  description?: string;
+  materials?: any[];
+  state?: 'PUBLISHED' | 'DRAFT' | 'DELETED';
+  alternateLink?: string;
+  creationTime?: string;
+  updateTime?: string;
+  dueDate?: { year: number; month: number; day: number };
+  dueTime?: { hours: number; minutes: number };
+  maxPoints?: number;
+  workType?: 'ASSIGNMENT' | 'SHORT_ANSWER_QUESTION' | 'MULTIPLE_CHOICE_QUESTION';
+  submissionModificationMode?: string;
+}
+
+export interface GoogleClassroomSubmission {
+  id: string;
+  courseId: string;
+  courseWorkId: string;
+  userId: string;
+  creationTime?: string;
+  updateTime?: string;
+  state?: 'NEW' | 'CREATED' | 'TURNED_IN' | 'RETURNED' | 'RECLAIMED_BY_STUDENT';
+  assignedGrade?: number;
+  draftGrade?: number;
+  alternateLink?: string;
+  associatedWithDeveloper?: boolean;
+}
+
+export interface GoogleClassroomStudent {
+  courseId: string;
+  userId: string;
+  profile?: {
+    id: string;
+    name?: { givenName: string; familyName: string; fullName: string };
+    emailAddress?: string;
+    photoUrl?: string;
+  };
+}
+
 const getHeaders = (token: string) => ({
   Authorization: `Bearer ${token}`,
   'Content-Type': 'application/json'
@@ -1084,3 +1145,168 @@ export const deleteGoogleKeepNote = async (accessToken: string, noteName: string
     throw new Error(err.error?.message || `Failed to delete Keep note: ${res.statusText}`);
   }
 };
+
+// ==========================================
+// 5. Google Classroom API Helper Functions
+// ==========================================
+
+export const listGoogleClassroomCourses = async (
+  accessToken: string,
+  courseStates: string[] = ['ACTIVE']
+): Promise<GoogleClassroomCourse[]> => {
+  let url = 'https://classroom.googleapis.com/v1/courses?pageSize=50';
+  if (courseStates.length > 0) {
+    courseStates.forEach((state) => {
+      url += `&courseStates=${encodeURIComponent(state)}`;
+    });
+  }
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Failed to fetch Classroom courses: ${res.statusText}`);
+  }
+
+  const data = await res.json();
+  return data.courses || [];
+};
+
+export const createGoogleClassroomCourse = async (
+  accessToken: string,
+  course: {
+    name: string;
+    section?: string;
+    descriptionHeading?: string;
+    description?: string;
+    room?: string;
+  }
+): Promise<GoogleClassroomCourse> => {
+  const body: any = {
+    name: course.name,
+    section: course.section || 'NDIS Practice Standard',
+    descriptionHeading: course.descriptionHeading || 'Clinical & Compliance Training',
+    description: course.description || '',
+    room: course.room || 'Online Hub',
+    ownerId: 'me'
+  };
+
+  const res = await fetch('https://classroom.googleapis.com/v1/courses', {
+    method: 'POST',
+    headers: getHeaders(accessToken),
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Failed to create Classroom course: ${res.statusText}`);
+  }
+
+  return await res.json();
+};
+
+export const listGoogleClassroomCourseWork = async (
+  accessToken: string,
+  courseId: string
+): Promise<GoogleClassroomCourseWork[]> => {
+  const res = await fetch(`https://classroom.googleapis.com/v1/courses/${encodeURIComponent(courseId)}/courseWork?pageSize=50`, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Failed to fetch course work: ${res.statusText}`);
+  }
+
+  const data = await res.json();
+  return data.courseWork || [];
+};
+
+export const createGoogleClassroomCourseWork = async (
+  accessToken: string,
+  courseId: string,
+  work: {
+    title: string;
+    description?: string;
+    maxPoints?: number;
+    workType?: 'ASSIGNMENT' | 'SHORT_ANSWER_QUESTION' | 'MULTIPLE_CHOICE_QUESTION';
+    dueDaysFromNow?: number;
+  }
+): Promise<GoogleClassroomCourseWork> => {
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + (work.dueDaysFromNow || 14));
+
+  const body: any = {
+    title: work.title,
+    description: work.description || '',
+    state: 'PUBLISHED',
+    workType: work.workType || 'ASSIGNMENT',
+    maxPoints: work.maxPoints || 100,
+    dueDate: {
+      year: dueDate.getFullYear(),
+      month: dueDate.getMonth() + 1,
+      day: dueDate.getDate()
+    },
+    dueTime: {
+      hours: 23,
+      minutes: 59
+    }
+  };
+
+  const res = await fetch(`https://classroom.googleapis.com/v1/courses/${encodeURIComponent(courseId)}/courseWork`, {
+    method: 'POST',
+    headers: getHeaders(accessToken),
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Failed to create course work: ${res.statusText}`);
+  }
+
+  return await res.json();
+};
+
+export const listGoogleClassroomSubmissions = async (
+  accessToken: string,
+  courseId: string,
+  courseWorkId: string
+): Promise<GoogleClassroomSubmission[]> => {
+  const res = await fetch(
+    `https://classroom.googleapis.com/v1/courses/${encodeURIComponent(courseId)}/courseWork/${encodeURIComponent(courseWorkId)}/studentSubmissions`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Failed to fetch submissions: ${res.statusText}`);
+  }
+
+  const data = await res.json();
+  return data.studentSubmissions || [];
+};
+
+export const listGoogleClassroomStudents = async (
+  accessToken: string,
+  courseId: string
+): Promise<GoogleClassroomStudent[]> => {
+  const res = await fetch(
+    `https://classroom.googleapis.com/v1/courses/${encodeURIComponent(courseId)}/students`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Failed to fetch students: ${res.statusText}`);
+  }
+
+  const data = await res.json();
+  return data.students || [];
+};
+

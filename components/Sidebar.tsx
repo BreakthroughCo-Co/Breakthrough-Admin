@@ -21,6 +21,7 @@ import {
   Globe,
   MapPin,
   StickyNote,
+  GraduationCap,
   Target,
   HeartHandshake,
   X
@@ -80,6 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
       title: 'Business & Governance',
       items: [
         { id: 'google-workspace', label: 'Google Workspace Hub', icon: Globe, highlight: true, badge: 'OAUTH' },
+        { id: 'google-classroom', label: 'Google Classroom', icon: GraduationCap, highlight: true, badge: 'ACADEMY' },
         { id: 'google-keep', label: 'Google Keep Notes', icon: StickyNote, highlight: true, badge: 'KEEP' },
         { id: 'audit', label: 'Compliance Dashboard', icon: Award, highlight: true },
         { id: 'crm', label: 'Intake & CRM Leads', icon: UserPlus },
