@@ -30,9 +30,11 @@ import { CRMModule } from '@/components/features/CRMModule';
 import { BillingModule } from '@/components/features/BillingModule';
 import { HRModule } from '@/components/features/HRModule';
 import { AuditLogsModule } from '@/components/features/AuditLogsModule';
+import { SecurityAuditModule } from '@/components/features/SecurityAuditModule';
 import { IntegrationsModule } from '@/components/features/IntegrationsModule';
 import { ParticipantPortalView } from '@/components/features/ParticipantPortalView';
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
+import { OfflineToast } from '@/components/OfflineToast';
 
 const ModuleLoadingFallback = ({ title }: { title: string }) => (
   <div className="flex flex-col items-center justify-center min-h-[360px] py-16 space-y-4 rounded-2xl bg-slate-900/30 border border-slate-800/50">
@@ -167,6 +169,12 @@ export default function Page() {
             <AuditLogsModule />
           </AccessGuard>
         );
+      case 'security-audit':
+        return (
+          <AccessGuard requiredRoles={['ADMIN']} moduleName="Security & Access Audit">
+            <SecurityAuditModule />
+          </AccessGuard>
+        );
       case 'integrations':
         return (
           <AccessGuard requiredRoles={['ADMIN']} moduleName="API Integrations & Hub">
@@ -212,6 +220,9 @@ export default function Page() {
           </kbd>
         </div>
       )}
+
+      {/* Persistent Non-Intrusive Offline Notification Toast */}
+      <OfflineToast />
 
       <PWAInstallPrompt />
       <CommandPalette />

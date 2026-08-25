@@ -25,6 +25,7 @@ import {
   Smartphone,
   Sparkles
 } from 'lucide-react';
+import { OAuthCredentialsGuide } from '@/components/features/OAuthCredentialsGuide';
 
 interface WebhookLog {
   id: string;
@@ -233,6 +234,9 @@ export const IntegrationsModule: React.FC = () => {
           <span>{diagnosticsResult}</span>
         </div>
       )}
+
+      {/* Step-by-Step OAuth Credentials Guide */}
+      <OAuthCredentialsGuide />
 
       {/* Integration Services Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

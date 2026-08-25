@@ -168,6 +168,7 @@ export type TabType =
   | 'billing'
   | 'hr-roster'
   | 'audit-logs'
+  | 'security-audit'
   | 'integrations';
 
 export const OFFICIAL_2026_NDIS_PRICE_GUIDE: NDISSupportItem[] = [

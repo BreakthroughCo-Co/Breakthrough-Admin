@@ -86,6 +86,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         { id: 'billing', label: 'NDIS Billing Claims', icon: Receipt },
         { id: 'hr-roster', label: 'Practitioners & HR', icon: UserCheck, adminOnly: true },
         { id: 'audit-logs', label: 'Audit Trail Ledger', icon: ShieldCheck, adminOnly: true },
+        { id: 'security-audit', label: 'Security & Access Audit', icon: Lock, badge: 'RECHARTS', adminOnly: true },
         { id: 'integrations', label: 'API Integrations & Hub', icon: Cpu, badge: 'GATEWAY', adminOnly: true },
       ],
     },

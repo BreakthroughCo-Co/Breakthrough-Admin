@@ -7,6 +7,7 @@ import { Client, RestrictivePractice, Incident, BillingClaim, AuditLog, Practiti
 import { queryCommandCenterAI } from '@/lib/ai-assistant';
 import { DueForReviewSummaryWidget } from '@/components/features/DueForReviewSummaryWidget';
 import { QuickActionsFloatingMenu } from '@/components/features/QuickActionsFloatingMenu';
+import { FinancialSyncHealthWidget } from '@/components/features/FinancialSyncHealthWidget';
 import {
   Users,
   ShieldAlert,
@@ -876,6 +877,9 @@ export const CommandCenter: React.FC = () => {
 
       {/* SUMMARY WIDGET: HIGHLIGHTS 'DUE FOR REVIEW' COMPLIANCE TASKS & UPCOMING NDIS AUDIT DEADLINES */}
       <DueForReviewSummaryWidget />
+
+      {/* Financial Sync Health & Xero Realtime Heartbeat Widget */}
+      <FinancialSyncHealthWidget />
 
       {/* DEDICATED NOTIFICATION CENTER */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-5 shadow-lg relative overflow-hidden">
