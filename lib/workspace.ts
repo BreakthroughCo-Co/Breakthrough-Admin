@@ -244,6 +244,39 @@ export const listFilesInFolder = async (
   return data.files || [];
 };
 
+/**
+ * Downloads the text or exported content of a file from Google Drive.
+ * Handles Google Docs (exported to plain text), Google Sheets (exported to CSV),
+ * and standard text/JSON/CSV/PDF files.
+ */
+export const fetchDriveFileTextContent = async (
+  accessToken: string,
+  fileId: string,
+  mimeType: string
+): Promise<string> => {
+  let downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+
+  // Google Docs export as text/plain
+  if (mimeType === 'application/vnd.google-apps.document') {
+    downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=text/plain`;
+  }
+  // Google Sheets export as text/csv
+  else if (mimeType === 'application/vnd.google-apps.spreadsheet') {
+    downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=text/csv`;
+  }
+
+  const res = await fetch(downloadUrl, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+
+  if (!res.ok) {
+    const err = await res.text().catch(() => '');
+    throw new Error(`Failed to read file content (${res.status}): ${err || res.statusText}`);
+  }
+
+  return await res.text();
+};
+
 export const createDriveFolder = async (
   accessToken: string,
   name: string,
