@@ -22,6 +22,7 @@ import {
   MapPin,
   StickyNote,
   Target,
+  HeartHandshake,
   X
 } from 'lucide-react';
 
@@ -58,6 +59,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
       title: 'Operations & Control',
       items: [
         { id: 'command-center', label: 'Command Center', icon: LayoutDashboard },
+        { id: 'participant-portal', label: 'Participant & Carer Portal', icon: HeartHandshake, badge: 'PORTAL' },
         { id: 'clients', label: 'NDIS Participants', icon: Users },
         { id: 'ndis-goals', label: 'NDIS Goal Tracker', icon: Target, badge: 'NEW' },
         { id: 'google-maps', label: 'Google Maps Routing', icon: MapPin, badge: 'MMM' },

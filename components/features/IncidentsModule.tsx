@@ -17,24 +17,92 @@ import {
   BrainCircuit,
   Bell,
   ArrowUpRight,
-  ShieldCheck
+  ShieldCheck,
+  ChevronRight,
+  UserCheck,
+  Lock,
+  ArrowRight,
+  Check
 } from 'lucide-react';
 import { Incident, Client } from '@/types';
 import { IncidentPDFReportModal } from './IncidentPDFReportModal';
+import { advanceIncidentWorkflow } from '@/lib/complianceService';
+
+const WORKFLOW_STEPS = ['Open', 'Investigating', 'Clinical Review', 'Director Sign-off', 'Closed'];
 
 export const IncidentsModule: React.FC = () => {
-  const { incidents, clients, currentUser, addIncident, updateIncidentStatus, setActiveTab } = useManagementStore();
+  const { incidents, clients, currentUser, addIncident, updateIncidentStatus, setActiveTab, addAuditLog, addNotification } = useManagementStore();
   const isViewer = currentUser?.role === 'VIEWER';
+  const isAdmin = currentUser?.role === 'ADMIN';
   const [isAdding, setIsAdding] = useState(false);
   const [selectedIncidentForPDF, setSelectedIncidentForPDF] = useState<Incident | null>(null);
   const [selectedClient, setSelectedClient] = useState(clients[0]?.id || 'cli-101');
   const [aiAssessments, setAiAssessments] = useState<Record<string, string>>({});
   const [isAssessing, setIsAssessing] = useState<Record<string, boolean>>({});
+  const [workflowError, setWorkflowError] = useState<string | null>(null);
   const [escalationToast, setEscalationToast] = useState<{
     show: boolean;
     clientName: string;
     severity: string;
   } | null>(null);
+
+  const getStepIndex = (status: string) => {
+    if (status === 'Investigating' || status === 'Under Investigation') return 1;
+    if (status === 'Clinical Review') return 2;
+    if (status === 'Director Sign-off') return 3;
+    if (status === 'Closed' || status === 'Resolved') return 4;
+    return 0;
+  };
+
+  const handleAdvanceWorkflow = (incident: Incident) => {
+    setWorkflowError(null);
+    const currentIdx = getStepIndex(incident.status);
+    if (currentIdx >= 4) return;
+
+    const nextStatus = WORKFLOW_STEPS[currentIdx + 1];
+
+    try {
+      const result = advanceIncidentWorkflow(
+        incident.id,
+        incident.status,
+        nextStatus,
+        {
+          uid: currentUser?.id || 'prac-1',
+          name: currentUser?.name || 'Practitioner',
+          role: currentUser?.role || 'PRACTITIONER'
+        },
+        incident
+      );
+
+      updateIncidentStatus(incident.id, result.newStatus as any);
+
+      addAuditLog(
+        'INCIDENT_WORKFLOW_ADVANCED',
+        'INCIDENTS',
+        incident.id,
+        `Advanced incident ${incident.id} from "${incident.status}" to "${result.newStatus}" by ${currentUser.name} (${currentUser.role}).`
+      );
+
+      addNotification({
+        title: `Incident Workflow: ${incident.clientName}`,
+        message: `Status transitioned to "${result.newStatus}".`,
+        type: 'incident',
+        severity: result.newStatus === 'Closed' ? 'success' : 'info',
+        linkTab: 'incidents'
+      });
+    } catch (err: any) {
+      setWorkflowError(err.message);
+      if (err.message.includes('ADMIN')) {
+        addNotification({
+          title: 'Sign-off Restricted',
+          message: 'Final incident closure sign-off requires Clinical Director (ADMIN) authorisation under NDIS rules.',
+          type: 'incident',
+          severity: 'high',
+          linkTab: 'incidents'
+        });
+      }
+    }
+  };
 
   const handleGenerateAssessment = async (incident: Incident) => {
     setIsAssessing(prev => ({ ...prev, [incident.id]: true }));
@@ -44,7 +112,7 @@ export const IncidentsModule: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: `Analyze this incident report for NDIS regulatory compliance risks and suggest immediate mitigation steps.\nParticipant: ${incident.clientName}\nSeverity: ${incident.severity}\nDescription: ${incident.description}\nAction Taken: ${incident.immediateActionTaken}\n\nProvide a concise 2-paragraph response outlining the regulatory risk (e.g. NDIS Commission reportable timeframe) and next steps.`,
-          model: 'gemini-3.1-pro-preview'
+          model: 'gemini-3.5-flash'
         }),
       });
       const data = await response.json();
@@ -80,13 +148,13 @@ export const IncidentsModule: React.FC = () => {
       severity,
       description,
       immediateActionTaken: actionTaken || 'Immediate safety plan activated & manager debriefed.',
-      reportedBy: 'Practitioner Context',
-      status: 'Investigating',
+      reportedBy: currentUser?.name || 'Practitioner Context',
+      status: 'Open',
       isNdisReportable: severity === 'Critical / Reportable',
-      ndis24hrNotified: false,
+      ndis24hrNotified: severity === 'Critical / Reportable',
       ndis5daySubmitted: false,
-      practitionerId: 'p1',
-      practitionerName: 'System User',
+      practitionerId: currentUser?.practitionerId || 'p1',
+      practitionerName: currentUser?.name || 'System User',
     });
 
     if (isHighOrCritical) {
@@ -224,7 +292,7 @@ export const IncidentsModule: React.FC = () => {
           <div>
             <h2 className="text-lg font-bold text-white">Incident & Quality Governance Register</h2>
             <p className="text-xs text-slate-400">
-              Compliant with NDIS Incident Management and Reportable Incidents Rules 2018.
+              Compliant with NDIS Incident Management and Reportable Incidents Rules 2018. Multi-Step Sign-Off Enforced.
             </p>
           </div>
         </div>
@@ -259,6 +327,16 @@ export const IncidentsModule: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Workflow Error Banner */}
+      {workflowError && (
+        <div className="p-3 bg-rose-950/80 border border-rose-500/50 rounded-xl text-xs text-rose-200 flex items-center justify-between gap-2">
+          <span>{workflowError}</span>
+          <button onClick={() => setWorkflowError(null)} className="p-1 text-rose-400 hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Automated Escalation Toast */}
       {escalationToast && escalationToast.show && (
@@ -311,11 +389,15 @@ export const IncidentsModule: React.FC = () => {
             incident.severity.includes('High') ||
             incident.severity.includes('Critical');
 
+          const stepIdx = getStepIndex(incident.status);
+          const isClosed = stepIdx === 4;
+
           return (
             <div
               key={incident.id}
-              className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-3 hover:border-slate-700 transition-all"
+              className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-4 hover:border-slate-700 transition-all"
             >
+              {/* Header bar */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-bold text-sm text-white">{incident.clientName}</span>
@@ -354,22 +436,93 @@ export const IncidentsModule: React.FC = () => {
                   <span className="text-[10px] text-slate-400 font-mono">
                     {new Date(incident.incidentDate).toLocaleString()}
                   </span>
-                  <select
-                    value={incident.status}
-                    disabled={isViewer}
-                    onChange={(e) => updateIncidentStatus(incident.id, e.target.value as any)}
-                    className={`bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-teal-300 font-bold ${
-                      isViewer ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
-                    }`}
-                  >
-                    <option value="Open">Open</option>
-                    <option value="Under Investigation">Under Investigation</option>
-                    <option value="Resolved">Resolved</option>
-                    <option value="Closed">Closed</option>
-                  </select>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono border ${
+                    isClosed
+                      ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                      : 'bg-teal-500/10 text-teal-300 border-teal-500/30'
+                  }`}>
+                    {incident.status}
+                  </span>
                 </div>
               </div>
 
+              {/* 4-Step Incident Investigation Sign-off Stepper (R12) */}
+              <div className="bg-slate-950/90 p-3 rounded-xl border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-bold text-slate-300 flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-teal-400" />
+                    4-Step Investigation Sign-off Lifecycle
+                  </span>
+                  <span className="text-slate-500 font-mono">
+                    Stage {stepIdx + 1} of 5 &bull; {incident.status}
+                  </span>
+                </div>
+
+                {/* Stepper bar */}
+                <div className="grid grid-cols-5 gap-1 pt-1">
+                  {WORKFLOW_STEPS.map((step, idx) => {
+                    const isPassed = idx < stepIdx;
+                    const isCurrent = idx === stepIdx;
+                    return (
+                      <div key={step} className="space-y-1">
+                        <div
+                          className={`h-1.5 rounded-full transition-all ${
+                            isPassed
+                              ? 'bg-emerald-500'
+                              : isCurrent
+                              ? 'bg-teal-400 animate-pulse'
+                              : 'bg-slate-800'
+                          }`}
+                        />
+                        <span
+                          className={`text-[9px] block font-mono truncate ${
+                            isCurrent
+                              ? 'text-teal-300 font-bold'
+                              : isPassed
+                              ? 'text-emerald-400'
+                              : 'text-slate-600'
+                          }`}
+                        >
+                          {step}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Workflow Transition Action Button */}
+                {!isClosed && !isViewer && (
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-900">
+                    <span className="text-[10px] text-slate-400">
+                      {incident.status === 'Director Sign-off'
+                        ? 'Requires Clinical Director (ADMIN) final sign-off to close'
+                        : `Advance to next stage: ${WORKFLOW_STEPS[stepIdx + 1]}`}
+                    </span>
+                    <button
+                      onClick={() => handleAdvanceWorkflow(incident)}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-sm ${
+                        incident.status === 'Director Sign-off'
+                          ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                          : 'bg-teal-600 hover:bg-teal-500 text-white'
+                      }`}
+                    >
+                      {incident.status === 'Director Sign-off' ? (
+                        <>
+                          <UserCheck className="w-3.5 h-3.5" />
+                          <span>Director Sign-off & Close</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Advance to {WORKFLOW_STEPS[stepIdx + 1]}</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Description & Action */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                 <div className="space-y-1 bg-slate-950/60 p-3 rounded-lg border border-slate-800/80">
                   <span className="text-[10px] font-bold text-slate-400 uppercase">Incident Description</span>
@@ -384,6 +537,7 @@ export const IncidentsModule: React.FC = () => {
                 </div>
               </div>
               
+              {/* Action buttons */}
               <div className="flex justify-end gap-2 border-t border-slate-800/80 pt-3 flex-wrap">
                  <button
                     id={`print-pdf-${incident.id}`}

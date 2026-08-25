@@ -1,13 +1,18 @@
 #!/usr/bin/env node
 
 /**
- * Breakthrough OS E2E Test Suite Runner
+ * Breakthrough OS E2E Test Suite Runner (Tiers 1–7)
  * 
- * Executes all 4 Tiers of E2E test suites across all 5 Phases:
- * Tier 1: Feature Coverage (≥25 tests)
- * Tier 2: Boundary & Corner Cases (≥25 tests)
- * Tier 3: Pairwise Cross-Feature Combinations (≥10 tests)
- * Tier 4: Real-World Clinical & Practice Management Workflows (≥5 scenarios)
+ * Executes all 7 Tiers of E2E test suites across all Breakthrough OS modules:
+ * Tier 1: Feature Coverage (28 tests)
+ * Tier 2: Boundary & Corner Cases (25 tests)
+ * Tier 3: Pairwise Cross-Feature Combinations (11 tests)
+ * Tier 4: Real-World Clinical & Practice Management Workflows (5 scenarios)
+ * Tier 5: Adversarial & Stress Testing (15 tests)
+ * Tier 6: AI Clinical Intelligence & Core Security (R1–R8) (28 tests)
+ * Tier 7: Integrations, Compliance, Storage & Mobile Workflows (R9–R16) (26 tests)
+ * 
+ * Total Target: 138 tests passing at 100%
  */
 
 import { runTier1Tests } from './e2e/tier1-feature-coverage.test.mjs';
@@ -15,6 +20,14 @@ import { runTier2Tests } from './e2e/tier2-boundary-corner.test.mjs';
 import { runTier3Tests } from './e2e/tier3-pairwise-cross-feature.test.mjs';
 import { runTier4Tests } from './e2e/tier4-real-world-workloads.test.mjs';
 import { runTier5Tests } from './e2e/tier5-adversarial-stress.test.mjs';
+import { runTier6Tests } from './e2e/tier6-ai-and-clinical-intelligence.test.mjs';
+import { runTier7Tests } from './e2e/tier7-integrations-and-compliance.test.mjs';
+import { runMilestone1Tests } from './e2e/milestone1-auth-storage.test.mjs';
+import { runMilestone2Tests } from './e2e/milestone2-clinical-ai.test.mjs';
+import { runMilestone3Tests } from './e2e/milestone3-financial-integrations.test.mjs';
+import { runMilestone3IntegrationsBillingTests } from './e2e/milestone3-integrations-billing.test.mjs';
+import { runMilestone4Tests } from './e2e/milestone4-compliance-suite.test.mjs';
+import { runMilestone5Tests } from './e2e/milestone5-portal-pwa-chatbot.test.mjs';
 
 // ANSI Color Formatting
 const colors = {
@@ -48,7 +61,14 @@ class TestReporter {
       'Tier 2': { total: 0, passed: 0, failed: 0 },
       'Tier 3': { total: 0, passed: 0, failed: 0 },
       'Tier 4': { total: 0, passed: 0, failed: 0 },
-      'Tier 5': { total: 0, passed: 0, failed: 0 }
+      'Tier 5': { total: 0, passed: 0, failed: 0 },
+      'Tier 6': { total: 0, passed: 0, failed: 0 },
+      'Tier 7': { total: 0, passed: 0, failed: 0 },
+      'Milestone 1': { total: 0, passed: 0, failed: 0 },
+      'Milestone 2': { total: 0, passed: 0, failed: 0 },
+      'Milestone 3': { total: 0, passed: 0, failed: 0 },
+      'Milestone 4': { total: 0, passed: 0, failed: 0 },
+      'Milestone 5': { total: 0, passed: 0, failed: 0 }
     };
   }
 
@@ -66,11 +86,18 @@ class TestReporter {
 
   async test(name, fn) {
     this.totalTests++;
-    const tierKey = this.currentSuite.startsWith('Tier 1') ? 'Tier 1'
+    const tierKey = this.currentSuite.startsWith('Milestone 1') ? 'Milestone 1'
+      : this.currentSuite.startsWith('Milestone 2') ? 'Milestone 2'
+      : this.currentSuite.startsWith('Milestone 3') ? 'Milestone 3'
+      : this.currentSuite.startsWith('Milestone 4') ? 'Milestone 4'
+      : this.currentSuite.startsWith('Milestone 5') ? 'Milestone 5'
+      : this.currentSuite.startsWith('Tier 1') ? 'Tier 1'
       : this.currentSuite.startsWith('Tier 2') ? 'Tier 2'
       : this.currentSuite.startsWith('Tier 3') ? 'Tier 3'
       : this.currentSuite.startsWith('Tier 4') ? 'Tier 4'
-      : 'Tier 5';
+      : this.currentSuite.startsWith('Tier 5') ? 'Tier 5'
+      : this.currentSuite.startsWith('Tier 6') ? 'Tier 6'
+      : 'Tier 7';
 
     this.tierResults[tierKey].total++;
     const testStart = performance.now();
@@ -148,12 +175,20 @@ async function main() {
   const reporter = new TestReporter();
 
   try {
-    // Execute all 5 Tiers
+    // Execute all test suites
+    await runMilestone1Tests(reporter);
+    await runMilestone2Tests(reporter);
+    await runMilestone3Tests(reporter);
+    await runMilestone3IntegrationsBillingTests(reporter);
+    await runMilestone4Tests(reporter);
+    await runMilestone5Tests(reporter);
     await runTier1Tests(reporter);
     await runTier2Tests(reporter);
     await runTier3Tests(reporter);
     await runTier4Tests(reporter);
     await runTier5Tests(reporter);
+    await runTier6Tests(reporter);
+    await runTier7Tests(reporter);
 
     const success = reporter.printSummary();
     process.exit(success ? 0 : 1);
@@ -164,3 +199,4 @@ async function main() {
 }
 
 main();
+

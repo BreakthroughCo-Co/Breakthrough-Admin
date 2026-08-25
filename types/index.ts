@@ -1,4 +1,4 @@
-export type UserRole = 'ADMIN' | 'PRACTITIONER' | 'VIEWER' | 'SUPPORT_COORDINATOR';
+export type UserRole = 'ADMIN' | 'PRACTITIONER' | 'VIEWER' | 'SUPPORT_COORDINATOR' | 'PARTICIPANT';
 
 export interface UserProfile {
   id: string;
@@ -11,6 +11,9 @@ export interface UserProfile {
   photoURL?: string;
   position?: string;
   practitionerId?: string;
+  participantId?: string;
+  linkedClientId?: string;
+  isInviteOnly?: boolean;
   workerScreeningStatus?: 'Active' | 'Pending' | 'Expiring Soon' | 'Expired';
   workerScreeningExpiry?: string;
   policeCheckExpiry?: string;
@@ -104,6 +107,8 @@ export interface Client {
   weeklyAllocatedHours?: number;
   restrictivePracticesActive: boolean;
   isCustomUserParticipant?: boolean;
+  documents?: AttachedDocument[];
+  attachedDocuments?: AttachedDocument[];
   createdAt: string;
   updatedAt: string;
 }
@@ -195,6 +200,8 @@ export interface Incident {
   rootCauseAnalysis?: string;
   correctiveActions?: string;
   reportedBy: string;
+  attachments?: AttachedDocument[];
+  documents?: AttachedDocument[];
   createdAt: string;
 }
 
@@ -316,10 +323,14 @@ export interface BillingClaim {
   slaDeadline?: string;
   paymentReceivedDate?: string;
   xeroInvoiceId?: string;
+  validationFlag?: string;
+  validationResult?: BillingValidationResult;
   practitionerId?: string;
   practitionerName?: string;
   supportItemName?: string;
   ndisCategory?: string;
+  attachments?: AttachedDocument[];
+  documents?: AttachedDocument[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -432,6 +443,569 @@ export interface KeepNoteItem {
   lastSyncedToCrm?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// ==========================================
+// Document Storage & File Management (R11)
+// ==========================================
+
+export type DocumentCategory =
+  | 'Consent Form'
+  | 'Assessment PDF'
+  | 'NDIS Plan Document'
+  | 'Incident Photo Evidence'
+  | 'Billing Receipt'
+  | 'BSP Document'
+  | 'Clinical Report'
+  | 'Other';
+
+export type AllowedMimeType =
+  | 'application/pdf'
+  | 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  | 'image/jpeg'
+  | 'image/png';
+
+export interface DocumentMetadata {
+  id: string;
+  fileName: string;
+  fileSize: number; // Max 26,214,400 bytes (25MB)
+  mimeType: AllowedMimeType | string;
+  category: DocumentCategory;
+  storagePath: string; // e.g. "clients/{clientId}/documents/{docId}/{fileName}"
+  downloadUrl: string;
+  clientId?: string;
+  clientName?: string;
+  entityType: 'Client' | 'Incident' | 'BillingClaim' | 'BSPDocument' | 'Practitioner' | 'General';
+  entityId: string;
+  uploadedBy: string; // User ID
+  uploadedByName: string;
+  assignedPractitionerId?: string;
+  description?: string;
+  tags?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AttachedDocument {
+  id: string;
+  name: string;
+  url: string;
+  sizeBytes: number;
+  mimeType: string;
+  uploadedBy: string;
+  uploadedByName?: string;
+  uploadedAt: string;
+  category: 'consent' | 'assessment' | 'bsp' | 'incident_photo' | 'other' | DocumentCategory;
+  clientId?: string;
+  incidentId?: string;
+  claimId?: string;
+  storagePath?: string;
+  downloadUrl?: string;
+  metadata?: Record<string, any>;
+}
+
+// ==========================================
+// Clinical AI Engines & Semantic Search (M2: R2, R3, R4, R6)
+// ==========================================
+
+export interface RiskAssessment {
+  riskLevel: 'Low' | 'Medium' | 'High' | 'Critical';
+  score: number; // 0 - 100
+  rationale: string;
+  calculatedAt: string;
+  triggeredAlerts: string[];
+  directorNotificationRequired?: boolean;
+  factorScores?: {
+    incidentRisk: number;
+    restrictiveRisk: number;
+    budgetVelocityRisk: number;
+    engagementRisk: number;
+    clinicalNotesRisk: number;
+  };
+}
+
+export interface AntecedentCluster {
+  antecedent: string;
+  count: number;
+  percentage: number;
+  description?: string;
+  recommendedModifications?: string[];
+}
+
+export interface ABCPatternAnalysis {
+  topAntecedents: AntecedentCluster[];
+  temporalDistribution: Record<string, number>;
+  timeOfDayDistribution?: {
+    morning: number;
+    afternoon: number;
+    evening: number;
+    night: number;
+  };
+  dayOfWeekDistribution?: Record<string, number>;
+  dominantFunction: 'Escape/Avoidance' | 'Attention/Social' | 'Tangible/Access' | 'Sensory/Automatic' | string;
+  functionBreakdown?: Record<string, { count: number; percentage: number }>;
+  pbsRecommendations: string[];
+  proactiveStrategies: string[];
+  reactiveStrategies: string[];
+  replacementSkills: string[];
+  clinicalHypothesis: string;
+}
+
+export interface ComprehensiveBSPSection {
+  sectionNumber: number;
+  title: string;
+  content: string;
+  items?: string[];
+  subsections?: Record<string, string | string[]>;
+}
+
+export interface ComprehensiveBSPResult {
+  id: string;
+  clientId: string;
+  clientName: string;
+  ndisNumber: string;
+  version: string;
+  status: 'Draft' | 'Panel Review' | 'Submitted to NDIS' | 'Active' | 'Superseded';
+  createdDate: string;
+  reviewDate: string;
+  authorName: string;
+  authorQualification?: string;
+  sections: {
+    section1_participantProfile: ComprehensiveBSPSection;
+    section2_presentingBehaviours: ComprehensiveBSPSection;
+    section3_antecedentAnalysis: ComprehensiveBSPSection;
+    section4_functionalAssessment: ComprehensiveBSPSection;
+    section5_proactiveStrategies: ComprehensiveBSPSection;
+    section6_replacementSkills: ComprehensiveBSPSection;
+    section7_reactiveAndRestrictivePractices: ComprehensiveBSPSection;
+  };
+  summary: string;
+  primaryBehaviorsOfConcern: string[];
+  proactiveStrategies: string[];
+  reactiveStrategies: string[];
+  restrictivePractices: RestrictivePractice[];
+  htmlContent: string;
+  markdownContent: string;
+}
+
+export interface SearchResult {
+  id: string;
+  category: 'CLIENT' | 'CASE_NOTE' | 'PRACTITIONER' | 'BILLING' | 'INCIDENT' | 'RESTRICTIVE_PRACTICE' | 'ABC_LOG';
+  title: string;
+  subtitle: string;
+  snippet: string;
+  targetTab: string;
+  entityId: string;
+  score: number;
+  badge: {
+    label: string;
+    color: string;
+  };
+  matchedField?: string;
+  matchedHighlights?: string[];
+  metadata?: Record<string, any>;
+}
+
+// ==========================================
+// Financial Intelligence & Integrations (M3: R5, R8, R9, R13)
+// ==========================================
+
+export interface BillingValidationBadge {
+  type: 'green' | 'amber' | 'red';
+  code: string;
+  message: string;
+  suggestedFix?: string;
+}
+
+export interface BillingValidationResult {
+  isClean: boolean;
+  badges: BillingValidationBadge[];
+  errors: string[];
+  warnings: string[];
+}
+
+export interface ProdaProcessedClaim {
+  claimId: string;
+  clientId?: string;
+  ndisNumber?: string;
+  amount?: number;
+  status: 'Paid' | 'Rejected' | 'Pending';
+  paceReference?: string | null;
+  rejectionCode?: string | null;
+  rejectionReason?: string | null;
+}
+
+export interface ProdaBatchSubmission {
+  batchId: string;
+  status: 'Pending' | 'Processing' | 'Completed' | 'Failed';
+  submittedClaimsCount: number;
+  approvedCount: number;
+  rejectedCount: number;
+  submittedAt?: string;
+  completedAt?: string;
+  timestamp?: string;
+  claims?: ProdaProcessedClaim[];
+  errors?: Array<{ claimId: string; errorCode: string; errorMessage: string }>;
+}
+
+export interface XeroOAuthState {
+  isConnected: boolean;
+  accessToken?: string | null;
+  refreshToken?: string | null;
+  tenantId?: string | null;
+  tenantName?: string | null;
+  expiresAt?: string | number | null;
+  lastSyncAt?: string;
+}
+
+export interface XeroInvoiceLineItem {
+  description: string;
+  itemCode?: string;
+  quantity: number;
+  unitAmount: number;
+  lineAmount: number;
+  accountCode?: string;
+}
+
+export interface XeroInvoice {
+  invoiceId: string;
+  invoiceNumber: string;
+  tenantId?: string;
+  type: 'ACCREC' | 'ACCPAY';
+  contact: {
+    name: string;
+    accountNumber?: string;
+    emailAddress?: string;
+  };
+  lineItems: XeroInvoiceLineItem[];
+  date: string;
+  dueDate: string;
+  status: 'DRAFT' | 'SUBMITTED' | 'AUTHORISED' | 'PAID' | 'VOIDED';
+  total: number;
+  amountDue: number;
+  amountPaid: number;
+  createdAt?: string;
+}
+
+export interface XeroPayment {
+  paymentId: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  amount: number;
+  paymentDate: string;
+  reference?: string;
+}
+
+export interface NDISPriceGuideSyncResult {
+  syncedCount: number;
+  changesCount: number;
+  changes: Array<{
+    code: string;
+    name: string;
+    oldRate: number;
+    newRate: number;
+  }>;
+  revalidatedClaimsCount: number;
+  timestamp: string;
+}
+
+// ==========================================
+// Statutory Compliance Automation Suite (M4: R12)
+// ==========================================
+
+export interface MonthlyComplianceMetrics {
+  activeRestrictivePracticesCount: number;
+  unauthorizedUsesCount: number;
+  totalIncidentsCount: number;
+  reportableIncidentsCount: number;
+  screeningComplianceRatePercent: number;
+  screeningExpiringSoonCount: number;
+  screeningExpiredCount: number;
+  totalClaimsCount: number;
+  totalBillingSubmittedAmount: number;
+  paceSubmissionRatePercent: number;
+}
+
+export interface MonthlyComplianceReport {
+  reportId: string;
+  reportingMonth: string; // e.g. "2026-08" or "2026-08-01"
+  generatedAt: string;
+  practiceDirectorEmail: string;
+  metrics: MonthlyComplianceMetrics;
+  auditSummary: string;
+  htmlContent?: string;
+  pdfBase64?: string;
+  emailedSuccessfully?: boolean;
+  status: 'Draft' | 'Generated' | 'Dispatched' | 'Acknowledged';
+}
+
+export interface RPReportEntry {
+  practiceId: string;
+  participantId?: string;
+  clientName: string;
+  participantName?: string;
+  participantNdisNumber?: string;
+  practiceType: 'Chemical' | 'Mechanical' | 'Physical' | 'Environmental' | 'Seclusion' | string;
+  authorizationStatus?: 'Authorized' | 'Emergency / Unauthorized' | 'Active' | 'Superseded' | 'Expired';
+  status?: string;
+  authorizationReference: string;
+  authorizingBody?: string;
+  usageFrequencyThisMonth?: number;
+  reductionPlanMilestonesAchieved?: string[];
+  reductionPlanSummary?: string;
+  adverseEventsLogged?: boolean;
+  startDate?: string;
+  expiryDate?: string;
+  monthlyReportStatus?: 'Submitted' | 'Due' | 'Overdue';
+}
+
+export interface NDISCommissionRPReport {
+  submissionId: string;
+  reportingPeriod: string;
+  providerRegistrationNumber: string;
+  generatedAt?: string;
+  extractedPractices: RPReportEntry[];
+  summary?: {
+    totalActivePractices: number;
+    authorizedCount: number;
+    unauthorizedEmergencyCount: number;
+    fadingMilestonesAchievedCount: number;
+    adverseEventsCount: number;
+  };
+}
+
+export interface NDISAuditBundleManifestItem {
+  fileName: string;
+  category: string;
+  recordCount: number;
+  sizeBytes: number;
+  description: string;
+}
+
+export interface NDISAuditBundle {
+  bundleId: string;
+  participantId: string;
+  participantName: string;
+  ndisNumber: string;
+  generatedAt: string;
+  bundleVersion?: string;
+  integrityHash: string; // SHA-256
+  packageSizeBytes: number;
+  manifest: string[] | NDISAuditBundleManifestItem[];
+  documentsIncluded?: {
+    clientProfile: boolean;
+    activeBSP: boolean;
+    caseNotesCount: number;
+    incidentsCount: number;
+    restrictivePracticesCount: number;
+    practitionerScreeningVerified: boolean;
+    abcLogsCount?: number;
+  };
+  dataPayload?: {
+    client: Client;
+    bsp: BSPDocument | null;
+    caseNotes: CaseNote[];
+    incidents: Incident[];
+    restrictivePractices: RestrictivePractice[];
+    practitioners: Practitioner[];
+    abcLogs?: ABCLog[];
+  };
+  htmlSummary?: string;
+}
+
+export type BSPReviewStatus = 'Current' | 'Due in 30 Days' | 'Under Review' | 'Panel Submitted' | 'Re-Authorized' | 'Expired';
+
+export interface BSPReviewAlert {
+  bspId: string;
+  clientId?: string;
+  clientName: string;
+  authorName?: string;
+  reviewDate?: string;
+  daysRemaining: number;
+  status: 'EXPIRED' | 'URGENT_14_DAYS' | 'WARNING_30_DAYS' | 'ON_TRACK' | BSPReviewStatus;
+  severity?: 'high' | 'medium' | 'low' | 'info';
+  recommendation?: string;
+}
+
+export interface BSPReviewTransitionResult {
+  bspId: string;
+  previousStatus: string;
+  newStatus: BSPReviewStatus;
+  transitionDate: string;
+  actorId: string;
+  actorName: string;
+  panelNotes?: string;
+  newReviewDate?: string;
+}
+
+export type IncidentWorkflowStatus = 'Open' | 'Investigating' | 'Clinical Review' | 'Director Sign-off' | 'Closed';
+
+export interface IncidentStep1Lodgement {
+  completed: boolean;
+  lodgedBy: string;
+  lodgedAt: string;
+  ndis24hNotified: boolean;
+  ndisReportable: boolean;
+}
+
+export interface IncidentStep2RootCause {
+  completed: boolean;
+  investigatorId?: string;
+  investigatorName?: string;
+  completedAt?: string;
+  rootCauseCategory?: 'Environmental' | 'Communication Breakdown' | 'Staffing Gap' | 'Medical' | 'Sensory Overload' | 'Unspecified';
+  analysisNotes?: string;
+  witnessStatements?: Array<{ witnessName: string; statement: string; date: string }>;
+}
+
+export interface IncidentStep3CorrectiveActions {
+  completed: boolean;
+  qualityOfficerId?: string;
+  qualityOfficerName?: string;
+  completedAt?: string;
+  actionItems: string[];
+  bspAmendmentRequired: boolean;
+  protocolUpdatesSummary?: string;
+}
+
+export interface IncidentStep4DirectorSignOff {
+  completed: boolean;
+  directorId?: string;
+  directorName?: string;
+  signedAt?: string;
+  closureDecision: 'Approved & Closed' | 'Re-investigation Required';
+  directorNotes?: string;
+}
+
+export interface IncidentSignOffWorkflow {
+  incidentId: string;
+  currentStep: 1 | 2 | 3 | 4;
+  currentStatus: IncidentWorkflowStatus;
+  step1_lodgement: IncidentStep1Lodgement;
+  step2_rootCause: IncidentStep2RootCause;
+  step3_correctiveActions: IncidentStep3CorrectiveActions;
+  step4_directorSignOff: IncidentStep4DirectorSignOff;
+  history?: Array<{
+    step: number;
+    fromStatus: string;
+    toStatus: string;
+    actorName: string;
+    timestamp: string;
+    notes?: string;
+  }>;
+}
+
+export interface IncidentWorkflowTransitionResult {
+  incidentId: string;
+  previousStatus: string;
+  newStatus: IncidentWorkflowStatus;
+  signedOffBy?: string;
+  timestamp: string;
+  workflow?: IncidentSignOffWorkflow;
+}
+
+// ==========================================
+// Milestone 5: Participant Portal, PWA & AI Chatbot (R14, R15, R16)
+// ==========================================
+
+export interface PlainLanguageSessionNote {
+  id: string;
+  sessionDate: string;
+  date?: string;
+  practitionerName: string;
+  durationMinutes: number;
+  summary: string;
+  sessionSummary: string;
+  plainLanguageProgress: string;
+  nextSessionFocus?: string;
+  positiveHighlights: string[];
+  skillsPracticed: string[];
+  homePracticeSuggestions: string[];
+  goalsAddressed: string[];
+  serviceType?: string;
+  verified?: boolean;
+}
+
+export interface ParticipantPortalData {
+  participantProfile: {
+    id: string;
+    name: string;
+    ndisNumber: string;
+    primaryDisability?: string;
+    planStartDate: string;
+    planEndDate: string;
+    primaryPractitionerName: string;
+    primaryPractitionerId?: string;
+    email?: string;
+    phone?: string;
+    goals?: ClientGoal[];
+  };
+  budgetSummary?: {
+    totalFunding: number;
+    usedFunding: number;
+    remainingFunding: number;
+    utilizationPercent: number;
+  };
+  budgetOverview: {
+    totalBudget: number;
+    spentBudget: number;
+    remainingBudget: number;
+    utilizationPercentage: number;
+  };
+  upcomingAppointments: ScheduledShift[];
+  sessionNotes?: PlainLanguageSessionNote[];
+  redactedSessionNotes: PlainLanguageSessionNote[];
+  goals?: ClientGoal[];
+  recentIncidents: Array<{
+    id: string;
+    date: string;
+    type?: string;
+    status?: string;
+    description: string;
+    actionTaken?: string;
+    severity?: string;
+  }>;
+}
+
+export interface OfflineSyncQueueItem {
+  id: string;
+  timestamp: string;
+  entity: 'CaseNote' | 'ABCLog' | 'Incident' | 'BillingClaim' | 'Client' | string;
+  action: 'CREATE' | 'UPDATE' | 'DELETE' | string;
+  payload: any;
+  retryCount: number;
+  status: 'PENDING' | 'SYNCING' | 'FAILED' | 'RESOLVED' | 'synced';
+  lastError?: string;
+}
+
+export interface PWAInstallStatus {
+  isInstalled: boolean;
+  isInstallPromptSupported: boolean;
+  isOfflineCapable: boolean;
+  serviceWorkerRegistered: boolean;
+}
+
+export interface ChatbotMessage {
+  id: string;
+  sender: 'user' | 'assistant' | 'bot' | 'system';
+  text: string;
+  timestamp: string;
+  isCrisis?: boolean;
+  isEscalated?: boolean;
+  escalatedTo?: string;
+  guardrailTriggered?: boolean;
+  escalationReason?: 'MEDICAL_QUERY' | 'CLINICAL_DIAGNOSIS' | 'SAFETY_CONCERN' | 'COMPLEX_REQUEST';
+}
+
+export interface ParticipantChatbotQueryResult {
+  reply: string;
+  message?: string;
+  guardrailTriggered: boolean;
+  isEscalated: boolean;
+  isCrisis: boolean;
+  escalatedTo?: string;
+  practitionerNotified?: string;
+  category?: 'budget' | 'appointment' | 'goals' | 'general' | 'medical_blocked' | 'crisis_escalated' | 'clinical_escalated';
 }
 
 

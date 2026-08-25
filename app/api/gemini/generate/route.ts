@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { DEFAULT_AI_MODEL } from '@/lib/ai-assistant';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -33,10 +34,7 @@ export async function POST(req: NextRequest) {
     if (systemInstruction) config.systemInstruction = systemInstruction;
     if (responseMimeType) config.responseMimeType = responseMimeType;
 
-    let selectedModel = model || 'gemini-3.5-flash';
-    if (selectedModel.includes('gemini-2.5')) {
-      selectedModel = 'gemini-3.5-flash';
-    }
+    const selectedModel = model || DEFAULT_AI_MODEL;
 
     const response = await ai.models.generateContent({
       model: selectedModel,

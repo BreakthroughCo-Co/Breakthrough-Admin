@@ -18,10 +18,10 @@ export const AccessGuard: React.FC<AccessGuardProps> = ({
   children,
   fallback
 }) => {
-  const { currentUser, setActiveTab } = useManagementStore();
+  const { currentUser, isAuthenticated, setActiveTab } = useManagementStore();
   const currentRole = currentUser?.role;
 
-  const hasAccess = currentRole && (requiredRoles.includes(currentRole) || currentRole === 'ADMIN');
+  const hasAccess = isAuthenticated && currentRole && (requiredRoles.includes(currentRole) || currentRole === 'ADMIN');
 
   if (hasAccess) {
     return <>{children}</>;

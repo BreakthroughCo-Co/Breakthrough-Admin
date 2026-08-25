@@ -1,92 +1,42 @@
-# Project: Breakthrough OS 5-Phase Production Rollout
+# Project: Breakthrough OS Production Rollout
 
 ## Architecture
-Breakthrough OS is a Next.js 15 (React 19) + Firebase (Auth, Firestore) + Zustand NDIS practice management platform for Behaviour Support practitioners.
-- **Presentation Layer**: Next.js App Router (`app/page.tsx`), 18 feature modules in `components/features/`, shared navigation in `components/Header.tsx`, `components/Sidebar.tsx`, `components/CommandPalette.tsx`, `components/QuickActionsFloatingMenu.tsx`.
-- **State & Optimistic Cache Layer**: Zustand store in `stores/useManagementStore.ts` caching domain entities (`clients`, `caseNotes`, `billingClaims`, `incidents`, `restrictivePractices`, `abcLogs`, `bspDocuments`, `crmLeads`, `crmTasks`, `practitioners`, `supportItems`, `auditLogs`, `notifications`), managing auth role state and offline delta queues.
-- **Persistence & Service Layer**: Typed Firestore services in `lib/firestoreService.ts`, real-time listener manager in `lib/firestoreListeners.ts`, Firebase initialization with persistent local multi-tab cache in `lib/firebase.ts`, offline IndexedDB storage in `lib/keepOfflineStorage.ts`.
-- **AI & Intelligence Layer**: Gemini API proxy (`app/api/gemini/generate/route.ts`), clinical heuristics and NLP prompt engineers in `lib/ai-assistant.ts`, Web Speech API voice transcription in `components/VoiceDictationBar.tsx` and `components/features/CaseNotesModule.tsx`.
-- **Analytics & Dashboard Layer**: Live aggregated metrics computed via React hooks / `useMemo`, rendered using `recharts` in `components/features/CommandCenter.tsx`, `components/features/ComplianceDashboard.tsx`, and `components/features/BillingModule.tsx`.
+Breakthrough OS is an enterprise-grade NDIS Behaviour Support practice management platform built on:
+- **Frontend & App Router**: Next.js 15 (React 19 App Router) with Tailwind CSS v4, Lucide icons, and responsive desktop/PWA layout.
+- **Backend & Database**: Firebase Auth, Cloud Firestore (with multi-tab persistent cache and offline delta sync), Firebase Storage (with RBAC and 25MB file validation), and Firebase App Hosting.
+- **State Management**: Zustand 5 with optimistic client-side caching, offline queueing (`OfflineDelta`), and bi-directional Firestore listener sync.
+- **AI & Clinical Intelligence**: Google Gemini API (`@google/genai`) for Behaviour Support Plan synthesis, ABC log pattern analysis, risk evaluation, claim pre-submission validation, natural language semantic search, and guardrailed participant chatbot.
+- **Enterprise Integrations**: NDIS PRODA PACE API, Xero OAuth 2.0, SendGrid transactional emails, Twilio SMS, and Google Calendar API.
+- **Test Infrastructure**: In-memory ESM test harness (`tests/runner.mjs` + `tests/harness/emulator.mjs`) supporting fast, deterministic zero-network E2E testing across Tiers 1–7+.
 
 ## Feature Inventory
 | # | Feature | Description | Milestone | Source |
 |---|---------|-------------|-----------|--------|
-| 1 | Firestore Typed Service Layer | CRUD services for all 15 collections with typed interfaces | M1 | ORIGINAL_REQUEST §R1 |
-| 2 | Firestore Security Rules (Persistence) | Allow authenticated read/write across all 15 collections; system read | M1 | ORIGINAL_REQUEST §R1 |
-| 3 | Store-to-Firestore Wiring | Wire Zustand action creators to firestoreService with optimistic updates | M1 | ORIGINAL_REQUEST §R1 |
-| 4 | Initial Data Hydration & Seeding | Hydrate store from Firestore on startup; seed defaults if empty | M1 | ORIGINAL_REQUEST §R1 |
-| 5 | Firebase Blueprint Alignment | Complete schemas for all collections in firebase-blueprint.json | M1 | ORIGINAL_REQUEST §R1 |
-| 6 | Authentication Screen & Gating | Show SignInScreen when signed out; redirect unauthenticated | M2 | ORIGINAL_REQUEST §R2 |
-| 7 | Session Restoration Fix | Fix initAuth session loss on reload while currentUser exists in IndexedDB | M2 | ORIGINAL_REQUEST §R2 |
-| 8 | RBAC Roles & Profile Sync | Support ADMIN, PRACTITIONER, VIEWER, SUPPORT_COORDINATOR from /users/{uid} | M2 | ORIGINAL_REQUEST §R2 |
-| 9 | Route & Navigation Gating | Restrict admin-only modules (HR, Audit, Integrations) across Sidebar/Palette/Shortcuts | M2 | ORIGINAL_REQUEST §R2 |
-| 10 | Action-Level Button Gating | Hide/disable Add/Delete/Approve for VIEWER; restrict delete to ADMIN | M2 | ORIGINAL_REQUEST §R2 |
-| 11 | Firestore Security Rules (RBAC) | Role-based authorization rules (admin delete, practitioner edit own) | M2 | ORIGINAL_REQUEST §R2 |
-| 12 | Real-Time onSnapshot Listeners | Real-time multi-tab propagation for Clients, Notes, Claims, Notifications | M3 | ORIGINAL_REQUEST §R3 |
-| 13 | Firestore Persistent Cache | Enable persistentLocalCache with persistentMultipleTabManager in firebase.ts | M3 | ORIGINAL_REQUEST §R3 |
-| 14 | Offline Queue & Delta Sync | True Firestore batch flush for OfflineDelta mutations in useManagementStore | M3 | ORIGINAL_REQUEST §R3 |
-| 15 | Connection Status Indicator | Reflect real Firestore connection and cache status in ConnectionStatusIndicator | M3 | ORIGINAL_REQUEST §R3 |
-| 16 | Case Notes AI Drafting | Auto-draft SIMPL/BIRP/Standard notes via Gemini with heuristic fallback | M4 | ORIGINAL_REQUEST §R4 |
-| 17 | ABC-to-Goals Generation | AI-suggested SMART/GAS goals from ABC log patterns in ABCAnalyserModule | M4 | ORIGINAL_REQUEST §R4 |
-| 18 | Command Center Live AI Chat | Conversational AI chat with live Firestore metrics context in CommandCenter | M4 | ORIGINAL_REQUEST §R4 |
-| 19 | Voice-to-Text Dictation | Web Speech API integration in CaseNotesModule surfacing into note fields | M4 | ORIGINAL_REQUEST §R4 |
-| 20 | Real-Time Billing Revenue Dashboard | Monthly claims submitted vs paid, outstanding balances by client | M5 | ORIGINAL_REQUEST §R5 |
-| 21 | Compliance KPI Dashboard | Worker screening expiry, incident reportability, restrictive practice expiry | M5 | ORIGINAL_REQUEST §R5 |
-| 22 | Practitioner Caseload Heatmap | Visual caseload capacity and distribution across practitioners | M5 | ORIGINAL_REQUEST §R5 |
-| 23 | Plan Budget Utilisation Chart | Client NDIS funding burn rate and category allocations | M5 | ORIGINAL_REQUEST §R5 |
-| 24 | Chart Skeletons & Empty States | Loading skeletons and empty state fallbacks for all Recharts widgets | M5 | ORIGINAL_REQUEST §R5 |
-| 25 | E2E Test Suite (Tiers 1-4) | Comprehensive opaque-box test suite across all acceptance criteria | M-TEST | Dual Track |
-| 26 | Final E2E Pass & Adversarial Hardening | 100% test pass + Tier 5 coverage hardening + Forensic audit | M-FINAL | Final Milestone |
+| R1 | Real Firebase Authentication & RBAC | Email/password auth, IndexedDB persistence, Firestore Security Rules (ADMIN, PRACTITIONER, VIEWER, SUPPORT_COORDINATOR), route gating | M1 | ORIGINAL_REQUEST §R1 |
+| R2 | AI BSP Document Generator | Gemini API synthesis of NDIS BSP from ABC logs, goals, restrictive practices, case notes, incidents + PDF export | M2 | ORIGINAL_REQUEST §R2 |
+| R3 | AI ABC Log Pattern Recognition | Antecedent clustering (Top 3), temporal patterns, and PBS intervention recommendations | M2 | ORIGINAL_REQUEST §R3 |
+| R4 | AI Continuous Risk Assessment | Multi-factor risk scoring (incidents, restrictive practices, budget velocity, session gaps), plain-English rationale, critical alert notifications | M2 | ORIGINAL_REQUEST §R4 |
+| R5 | AI Billing Claim Validator | Pre-submission checks for 2026 NDIS price caps, duplicate claims, missing fields, and case note matching with validation badges | M3 | ORIGINAL_REQUEST §R5 |
+| R6 | AI Semantic Search Across Records | Natural language search with query intent parsing across notes, incidents, ABC logs, billing, and clients | M2 | ORIGINAL_REQUEST §R6 |
+| R7 | AI Scheduling Optimiser & GCal Sync | Caseload capacity rebalancing, travel time clustering, and bidirectional Google Calendar sync | M3 | ORIGINAL_REQUEST §R7 |
+| R8 | NDIS PRODA API Direct Claim Submission | Programmatic bulk claim submission via NDIS Provider API with automated PACE status polling and ledger updates | M3 | ORIGINAL_REQUEST §R8 |
+| R9 | Xero OAuth 2.0 Live Integration | OAuth 2.0 authorization code exchange, token refresh, AR invoice creation, and bank feed payment reconciliation | M3 | ORIGINAL_REQUEST §R9 |
+| R10 | Email & SMS Notification Infrastructure | SendGrid and Twilio dispatch engine for critical incidents, 14d/3d compliance expiries, payment receipts, and 30d BSP reviews | M3 | ORIGINAL_REQUEST §R10 |
+| R11 | File & Document Storage | Firebase Storage integration, storage.rules RBAC, 25MB limits, MIME restrictions, and UI document dropzones/tables | M1 | ORIGINAL_REQUEST §R11 |
+| R12 | Compliance Automation Suite | Monthly compliance PDF on 1st, Restrictive Practice report, NDIS audit bundle exporter, 12mo BSP review, multi-step incident sign-off | M4 | ORIGINAL_REQUEST §R12 |
+| R13 | NDIS Price Guide Auto-Sync | Live rate sync, price cap diffing, practitioner alerts, and retrospective claim re-validation | M3 | ORIGINAL_REQUEST §R13 |
+| R14 | Participant & Carer Portal | Invite-only PARTICIPANT role, appointments, plain-language note redaction, budget utilization, and submitted incidents | M5 | ORIGINAL_REQUEST §R14 |
+| R15 | Progressive Web App (PWA) | manifest.json, service worker offline caching, offline note drafting & ABC logging, background sync | M5 | ORIGINAL_REQUEST §R15 |
+| R16 | AI Participant & Carer Chatbot | Gemini chatbot in portal, plan/budget Q&A, clinical guardrails, and practitioner escalation | M5 | ORIGINAL_REQUEST §R16 |
+| R17 | Comprehensive E2E Test Suite Expansion | Tier 6 (Integrations) & Tier 7 (Compliance/Portal/PWA) test expansion with 50+ new tests, 100% pass rate on full suite | M6 | ORIGINAL_REQUEST §R17 |
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M-TEST | E2E Testing Track | Test harness, runner, and Tiers 1-4 test cases; publish TEST_READY.md | none | DONE |
-| M1 | Phase 1: Firestore Persistence Layer | Typed services, security rules, store hydration, blueprint update | none | DONE |
-| M2 | Phase 2: Auth Guards & RBAC | SignInScreen, route guards, RBAC store sync, action gating, RBAC rules | M1 | DONE |
-| M3 | Phase 3: Real-Time & Offline Sync | onSnapshot listeners, persistent cache, OfflineDelta flush, connection status | M1, M2 | DONE |
-| M4 | Phase 4: AI Enhancements via Gemini | SIMPL/BIRP drafting, ABC-to-goals, Command Center live chat, voice dictation | M1, M3 | DONE |
-| M5 | Phase 5: Dashboards & Compliance Analytics | Live billing/compliance/caseload/budget charts with loading skeletons | M1, M3 | DONE |
-| M-FINAL | Final Verification & Hardening | 100% E2E test pass (Tiers 1-4) + Tier 5 adversarial tests + Forensic Audit | M-TEST, M1, M2, M3, M4, M5 | DONE |
-
-## Interface Contracts
-### `lib/firestoreService.ts` ↔ `stores/useManagementStore.ts`
-- `fetchCollection<T>(name: string): Promise<T[]>`
-- `createDocument<T>(collection: string, data: T, id?: string): Promise<string>`
-- `updateDocument<T>(collection: string, id: string, data: Partial<T>): Promise<void>`
-- `deleteDocument(collection: string, id: string): Promise<void>`
-- `subscribeToCollection<T>(collection: string, onUpdate: (data: T[]) => void): () => void`
-
-### `types/index.ts` (RBAC & Domain)
-- `export type UserRole = 'ADMIN' | 'PRACTITIONER' | 'VIEWER' | 'SUPPORT_COORDINATOR';`
-- `export interface UserProfile { uid: string; email: string; displayName: string; role: UserRole; practitionerId?: string; }`
-
-### `lib/firestoreListeners.ts` ↔ State
-- `initFirestoreListeners(store: ManagementStore): () => void`
-- Attaches `onSnapshot` listeners to active collections and calls `store.setEntities(collection, data)` without triggering redundant writes.
-
-### `lib/ai-assistant.ts` ↔ UI Modules
-- `draftCaseNote(summary: string, format: 'SIMPL' | 'BIRP' | 'Standard'): Promise<{ content: string; sections?: Record<string, string> }>`
-- `suggestGoalsFromABC(abcLogs: ABCLog[]): Promise<NDISGoal[]>`
-- `queryCommandCenterAI(question: string, context: LiveMetricsContext): Promise<string>`
-
-## Code Layout
-- `lib/`
-  - `firebase.ts`: Firebase app, auth, and firestore initialization with persistent cache.
-  - `firestoreService.ts`: Type-safe Firestore CRUD operations for all 15 collections.
-  - `firestoreListeners.ts`: Multi-collection real-time onSnapshot synchronization.
-  - `ai-assistant.ts`: Gemini API integration and deterministic clinical fallback heuristics.
-  - `keepOfflineStorage.ts`: IndexedDB storage for Google Keep notes.
-- `types/`
-  - `index.ts`: Central domain types, UserRole, UserProfile, OfflineDelta, ScheduledShift.
-- `stores/`
-  - `useManagementStore.ts`: Optimistic Zustand store, Firestore hydration, delta queue sync.
-- `components/`
-  - `SignInScreen.tsx`: Gated authentication screen with Google Sign-In.
-  - `AccessGuard.tsx`: Role and permission boundary wrapper.
-  - `ConnectionStatusIndicator.tsx`: Real Firestore transport & offline indicator.
-  - `VoiceDictationBar.tsx`: Speech-to-text recording interface.
-  - `features/`: 18 practice management modules (`ClientsModule.tsx`, `CaseNotesModule.tsx`, `BillingModule.tsx`, `ComplianceDashboard.tsx`, `CommandCenter.tsx`, `ABCAnalyserModule.tsx`, etc.).
-- `firestore.rules`: 15-collection role-aware security ruleset.
-- `firebase-blueprint.json`: Data schema blueprints for all Firestore collections.
-- `tests/`: E2E test suites (Tiers 1–5), runners, and verification harnesses.
+| M1 | Authentication, Security & Storage Foundation | R1 (Firebase Auth, Security Rules, RBAC, route gating) + R11 (Firebase Storage, storage.rules, document metadata) | none | DONE |
+| M2 | Clinical Intelligence & AI Synthesis Suite | R2 (AI BSP Gen & PDF) + R3 (AI ABC Patterns) + R4 (AI Risk Engine) + R6 (AI Semantic Search) | M1 | DONE |
+| M3 | Enterprise Integrations, Billing & Scheduling | R5 (Billing Validator) + R7 (Scheduler & GCal) + R8 (PRODA API) + R9 (Xero OAuth) + R10 (SendGrid/Twilio) + R13 (Price Guide Auto-Sync) | M1 | DONE |
+| M4 | Statutory Compliance Automation Suite | R12 (Monthly PDF, RP Report, Audit Bundles, 12mo BSP Review, 4-Step Incident Sign-off) | M1, M2 | IN_PROGRESS |
+| M5 | Participant Portal, PWA & AI Chatbot | R14 (Participant Portal & Redactor) + R15 (PWA & Offline Sync) + R16 (Guardrailed Chatbot) | M1, M2 | IN_PROGRESS |
+| M6 | E2E Testing Track (Tiers 6 & 7 Expansion) | R17 (Test harness emulator extensions, Tier 6 & Tier 7 suites with 50+ new tests in runner.mjs) | M1, M2, M3, M4, M5 | PLANNED |
+| M7 | Final Integration, Adversarial Hardening & GitHub Push | Full E2E verification (100% pass), Tier 5 adversarial stress verification, git commit and push to main branch | M6 | PLANNED |

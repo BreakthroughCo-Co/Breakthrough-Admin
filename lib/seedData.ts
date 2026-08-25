@@ -197,6 +197,16 @@ export const INITIAL_USERS: UserProfile[] = [
     ndisOrientationDone: true,
     activeCaseload: 22,
   },
+  {
+    id: 'user-participant',
+    name: 'Jordan Miller',
+    email: 'jordan.miller@participants.breakthrough.org.au',
+    role: 'PARTICIPANT',
+    position: 'NDIS Participant / Self-Advocate',
+    practitionerId: undefined,
+    workerScreeningStatus: undefined,
+    activeCaseload: 0,
+  },
 ];
 
 export const INITIAL_CLIENTS: Client[] = [

@@ -1,8 +1,9 @@
 'use client';
-
 import React, { useState, useMemo } from 'react';
-import { BillingClaim, Practitioner, Client } from '@/types';
+import { BillingClaim, Practitioner, Client, ProdaBatchSubmission } from '@/types';
 import { useManagementStore } from '@/stores/useManagementStore';
+import { NDISProdaApiService } from '@/lib/prodaService';
+import { validateClaimPreSubmission } from '@/lib/claimValidator';
 import {
   FileCode,
   Download,
@@ -17,7 +18,10 @@ import {
   ShieldCheck,
   Filter,
   Layers,
-  ArrowRight
+  ArrowRight,
+  RefreshCw,
+  Clock,
+  AlertCircle
 } from 'lucide-react';
 
 interface ProdaBatchModalProps {
@@ -26,7 +30,17 @@ interface ProdaBatchModalProps {
 }
 
 export const ProdaBatchModal: React.FC<ProdaBatchModalProps> = ({ isOpen, onClose }) => {
-  const { billingClaims, practitioners, clients, updateBillingStatus, addAuditLog, addNotification } = useManagementStore();
+  const {
+    billingClaims,
+    practitioners,
+    clients,
+    caseNotes,
+    supportItems,
+    updateBillingStatus,
+    updateBillingClaim,
+    addAuditLog,
+    addNotification
+  } = useManagementStore();
 
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'Approved' | 'Pending' | 'Submitted PACE'>('Approved');
   const [selectedClaimIds, setSelectedClaimIds] = useState<string[]>(() => {
@@ -38,6 +52,7 @@ export const ProdaBatchModal: React.FC<ProdaBatchModalProps> = ({ isOpen, onClos
   const [batchPrefix, setBatchPrefix] = useState('PRODA-BATCH');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionCompleted, setSubmissionCompleted] = useState(false);
+  const [completedBatchResult, setCompletedBatchResult] = useState<ProdaBatchSubmission | null>(null);
 
   // Filtered claims according to status filter
   const displayedClaims = useMemo(() => {
@@ -125,31 +140,34 @@ ${claimsXml}
 </NDISBulkPaymentRequest>`;
   }, [selectedClaims, providerRegNumber, batchId, clients, practitioners, totalSelectedValue]);
 
-  // Validation Checks
-  const validationErrors = useMemo(() => {
-    const errors: string[] = [];
-    if (selectedClaims.length === 0) {
-      errors.push('Please select at least 1 billing claim to include in the batch.');
-      return errors;
-    }
-
-    selectedClaims.forEach((c) => {
-      if (!c.ndisNumber || c.ndisNumber.length < 8) {
-        errors.push(`Claim ${c.invoiceNumber}: Invalid NDIS number (${c.ndisNumber}).`);
-      }
-      if (c.hours <= 0) {
-        errors.push(`Claim ${c.invoiceNumber}: Hours must be greater than zero.`);
-      }
-      if (c.totalAmount <= 0) {
-        errors.push(`Claim ${c.invoiceNumber}: Total claim amount must be greater than zero.`);
-      }
-      if (!c.supportItemCode) {
-        errors.push(`Claim ${c.invoiceNumber}: Missing NDIS support item code.`);
-      }
+  // Validation Checks using AI Pre-Submission Validator (R5)
+  const validationResults = useMemo(() => {
+    return selectedClaims.map((claim) => {
+      const client = clients.find((cli) => cli.id === claim.clientId || cli.ndisNumber === claim.ndisNumber);
+      return {
+        claim,
+        result: validateClaimPreSubmission(claim, {
+          allClaims: billingClaims,
+          caseNotes,
+          supportItems,
+          client
+        })
+      };
     });
+  }, [selectedClaims, billingClaims, caseNotes, supportItems, clients]);
 
+  const validationErrors = useMemo(() => {
+    if (selectedClaims.length === 0) {
+      return ['Please select at least 1 billing claim to include in the batch.'];
+    }
+    const errors: string[] = [];
+    validationResults.forEach(({ claim, result }) => {
+      result.errors.forEach((err) => {
+        errors.push(`Claim ${claim.invoiceNumber || claim.id}: ${err}`);
+      });
+    });
     return errors;
-  }, [selectedClaims]);
+  }, [selectedClaims, validationResults]);
 
   const handleDownloadXml = () => {
     const blob = new Blob([xmlContent], { type: 'application/xml;charset=utf-8;' });
@@ -225,34 +243,50 @@ ${claimsXml}
     }
   };
 
-  const handleSubmitBatch = () => {
+  const handleSubmitBatch = async () => {
     if (validationErrors.length > 0) return;
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      // Mark all selected claims as Submitted PACE
-      selectedClaims.forEach((c) => {
-        updateBillingStatus(c.id, 'Submitted PACE');
+    try {
+      // 1. Direct submit to PRODA PACE endpoint
+      const submission = NDISProdaApiService.submitBatch(
+        selectedClaimIds,
+        billingClaims,
+        providerRegNumber
+      );
+
+      // 2. Poll live PACE batch status
+      const pollResult = NDISProdaApiService.pollBatchStatus(submission.batchId);
+      setCompletedBatchResult(pollResult);
+
+      // 3. Reconcile outcomes into local store ledger
+      NDISProdaApiService.reconcileBatchWithLedger(pollResult, {
+        billingClaims,
+        updateBillingClaim
       });
 
       addAuditLog(
         'SUBMIT_PRODA_BATCH_PACE',
         'BILLING_CLAIMS',
-        batchId,
-        `Submitted PRODA Batch ${batchId} to NDIS PACE portal. Marked ${selectedClaims.length} claims as Submitted PACE ($${totalSelectedValue.toFixed(2)}).`
+        submission.batchId,
+        `Submitted PRODA Batch ${submission.batchId} to NDIS PACE portal. Result: ${pollResult.approvedCount} Paid, ${pollResult.rejectedCount} Rejected ($${totalSelectedValue.toFixed(2)}).`
       );
 
       addNotification({
-        title: `NDIS PRODA XML Batch Submitted: ${batchId}`,
-        message: `Dispatched ${selectedClaims.length} approved session claims ($${totalSelectedValue.toFixed(2)}) to NDIS PACE portal. Batch verification confirmed.`,
-        type: 'compliance',
-        severity: 'info',
+        title: `NDIS PRODA Batch Processed: ${submission.batchId}`,
+        message: `PACE Outcome: ${pollResult.approvedCount} Paid (${pollResult.approvedCount} approved, ${pollResult.rejectedCount} rejected). Reconciled in billing ledger.`,
+        type: 'billing',
+        severity: pollResult.rejectedCount > 0 ? 'high' : 'info',
         linkTab: 'billing',
       });
 
       setIsSubmitting(false);
       setSubmissionCompleted(true);
-    }, 1000);
+    } catch (err: any) {
+      console.error('PRODA Batch submission failed:', err);
+      setIsSubmitting(false);
+      alert(`PRODA Submission Failed: ${err.message || 'Unknown error'}`);
+    }
   };
 
   if (!isOpen) return null;
@@ -268,13 +302,13 @@ ${claimsXml}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-white">NDIS PRODA Bulk Claim XML Batch Generator</h3>
+                <h3 className="text-base font-bold text-white">NDIS PRODA B2G Direct Batch Claim Submission</h3>
                 <span className="text-[10px] bg-emerald-500/10 text-emerald-300 font-mono px-2 py-0.5 rounded border border-emerald-500/20 font-bold">
-                  B2G v2.0 XML Standard
+                  B2G v2.0 XML / PACE API
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Format approved clinical sessions into official NDIS portal batch submission XML with pre-flight schema verification.
+                Direct programmatic submission of approved clinical claims to NDIS PRODA PACE with automated ledger reconciliation.
               </p>
             </div>
           </div>
@@ -289,20 +323,80 @@ ${claimsXml}
 
         {/* Content Body */}
         <div className="p-5 flex-1 overflow-y-auto space-y-5">
-          {submissionCompleted ? (
-            <div className="p-6 bg-emerald-950/30 border border-emerald-500/30 rounded-2xl text-center space-y-4">
-              <div className="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <div className="space-y-1">
-                <h4 className="text-base font-bold text-white">PRODA Batch Successfully Transmitted & Logged</h4>
+          {submissionCompleted && completedBatchResult ? (
+            <div className="p-6 bg-slate-950/60 border border-slate-800 rounded-2xl space-y-5">
+              <div className="text-center space-y-2">
+                <div className="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <h4 className="text-base font-bold text-white">NDIS PRODA Batch Processed & Reconciled</h4>
                 <p className="text-xs text-emerald-300 font-mono">
-                  Batch Reference: <strong>{batchId}</strong> | {selectedClaims.length} Claims | ${totalSelectedValue.toFixed(2)} AUD
-                </p>
-                <p className="text-xs text-slate-400 max-w-md mx-auto mt-2">
-                  All selected claims have been updated to &apos;Submitted PACE&apos; status and logged to the immutable audit trail ledger.
+                  Batch ID: <strong>{completedBatchResult.batchId}</strong> | {completedBatchResult.submittedClaimsCount} Claims Submitted
                 </p>
               </div>
+
+              {/* Status Breakdown Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3.5 bg-emerald-950/20 border border-emerald-500/30 rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      PACE Paid / Approved
+                    </span>
+                    <span className="text-lg font-mono font-extrabold text-emerald-400">
+                      {completedBatchResult.approvedCount}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Claims reconciled with active PACE payment reference numbers.
+                  </p>
+                </div>
+
+                <div className="p-3.5 bg-rose-950/20 border border-rose-500/30 rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-rose-300 flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4 text-rose-400" />
+                      PACE Rejected
+                    </span>
+                    <span className="text-lg font-mono font-extrabold text-rose-400">
+                      {completedBatchResult.rejectedCount}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Claims flagged with rejection error codes in billing ledger.
+                  </p>
+                </div>
+              </div>
+
+              {/* Claims Outcome List */}
+              {completedBatchResult.claims && completedBatchResult.claims.length > 0 && (
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 max-h-48 overflow-y-auto font-mono text-xs space-y-2">
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wider font-sans font-bold">
+                    PACE Transaction Details
+                  </div>
+                  {completedBatchResult.claims.map((c) => (
+                    <div
+                      key={c.claimId}
+                      className={`p-2 rounded-lg border flex items-center justify-between gap-2 text-[11px] ${
+                        c.status === 'Paid'
+                          ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300'
+                          : 'bg-rose-950/30 border-rose-500/30 text-rose-300'
+                      }`}
+                    >
+                      <div>
+                        <span className="font-bold">{c.claimId}</span>
+                        {c.paceReference && (
+                          <span className="text-[10px] text-slate-400 ml-2">Ref: {c.paceReference}</span>
+                        )}
+                        {c.rejectionReason && (
+                          <span className="text-[10px] text-rose-400 block">{c.rejectionReason}</span>
+                        )}
+                      </div>
+                      <span className="font-bold shrink-0">{c.status}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div className="flex items-center justify-center gap-3 pt-2">
                 <button
@@ -315,6 +409,7 @@ ${claimsXml}
                 <button
                   onClick={() => {
                     setSubmissionCompleted(false);
+                    setCompletedBatchResult(null);
                     onClose();
                   }}
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition-all"

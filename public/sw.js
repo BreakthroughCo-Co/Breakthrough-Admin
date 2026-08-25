@@ -1,12 +1,18 @@
-// Service Worker for NDIS Google Keep & Clinical Hub
-// Provides multi-tier offline caching and resilient synchronization for off-site field visits
+// Service Worker for Breakthrough OS PWA (R15)
+// Provides multi-tier offline caching, background synchronization, and resilient drafting for field visits
 
-const CACHE_NAME = 'breakthrough-keep-v3';
-const DATA_CACHE_NAME = 'breakthrough-keep-data-v3';
+const CACHE_NAME = 'breakthrough-shell-v5';
+const DATA_CACHE_NAME = 'breakthrough-data-v5';
+const DRAFT_CACHE_NAME = 'breakthrough-drafts-v5';
 const OFFLINE_URL = '/';
 
 const ASSETS_TO_CACHE = [
-  '/'
+  '/',
+  '/portal',
+  '/manifest.json',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
+  '/icons/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -24,7 +30,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME && key !== DATA_CACHE_NAME) {
+          if (key !== CACHE_NAME && key !== DATA_CACHE_NAME && key !== DRAFT_CACHE_NAME) {
             return caches.delete(key);
           }
         })
@@ -50,7 +56,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Special handling for Keep & Clinical API calls (stale-while-revalidate / cache fallback)
+  // Special handling for API calls: NetworkFirst with cache fallback
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(event.request)
@@ -70,7 +76,7 @@ self.addEventListener('fetch', (event) => {
             JSON.stringify({
               offline: true,
               timestamp: new Date().toISOString(),
-              message: 'Operating in Field Offline Mode. Local IndexedDB cache active.'
+              message: 'Operating in Field Offline Mode. Local IndexedDB cache and draft queue active.'
             }),
             { headers: { 'Content-Type': 'application/json' } }
           );
@@ -79,16 +85,53 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For navigate requests only, fallback to cached offline home page if network fails
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(async () => {
-        const fallback = await caches.match(OFFLINE_URL);
-        if (fallback) return fallback;
-        return fetch(event.request);
+  // For static assets & navigate requests (CacheFirst with Network Fallback)
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const clone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, clone);
+          });
+        }
+        return networkResponse;
+      }).catch(async () => {
+        if (event.request.mode === 'navigate') {
+          const fallback = await caches.match(OFFLINE_URL);
+          if (fallback) return fallback;
+        }
+        return new Response('Operating Offline in Breakthrough OS Field Mode', {
+          status: 503,
+          statusText: 'Service Unavailable Offline'
+        });
+      });
+    })
+  );
+});
+
+// Background sync handler for offline mutation replay
+self.addEventListener('sync', (event) => {
+  if (
+    event.tag === 'sync-clinical-notes' ||
+    event.tag === 'sync-offline-mutations' ||
+    event.tag === 'sync-abc-logs' ||
+    event.tag === 'sync-incidents'
+  ) {
+    event.waitUntil(
+      self.clients.matchAll().then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({
+            type: 'BACKGROUND_SYNC_TRIGGERED',
+            tag: event.tag,
+            timestamp: new Date().toISOString()
+          });
+        });
       })
     );
-    return;
   }
 });
 
@@ -97,5 +140,14 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+  if (event.data && event.data.type === 'CACHE_DRAFT') {
+    // Acknowledge draft saved in offline storage
+    if (event.source) {
+      event.source.postMessage({
+        type: 'DRAFT_CACHED_ACK',
+        id: event.data.id,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
 });
-

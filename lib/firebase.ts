@@ -5,6 +5,13 @@ import {
   signInWithPopup,
   signOut,
   onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  updateProfile,
+  setPersistence,
+  browserLocalPersistence,
+  indexedDBLocalPersistence,
   User,
   UserCredential
 } from 'firebase/auth';
@@ -14,9 +21,12 @@ import {
   persistentLocalCache,
   persistentMultipleTabManager,
   doc,
+  setDoc,
   getDocFromServer,
   Firestore
 } from 'firebase/firestore';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
+import { UserProfile, UserRole } from '@/types';
 import appletConfig from '../firebase-applet-config.json';
 
 // Comprehensive Scopes for Google Workspace Integration
@@ -46,6 +56,16 @@ export const WORKSPACE_SCOPES = [
 
 const app = getApps().length > 0 ? getApp() : initializeApp(appletConfig);
 export const auth = getAuth(app);
+export const storage: FirebaseStorage = getStorage(app);
+
+// Configure robust session persistence for browser environments
+if (typeof window !== 'undefined') {
+  setPersistence(auth, indexedDBLocalPersistence).catch(() => {
+    setPersistence(auth, browserLocalPersistence).catch((err) => {
+      console.warn('Auth persistence fallback:', err);
+    });
+  });
+}
 
 function getFirestoreInstance(): Firestore {
   const databaseId = (appletConfig as any).firestoreDatabaseId;
@@ -175,3 +195,95 @@ export const initAuth = (
     }
   });
 };
+
+/**
+ * Sign in with email and password
+ */
+export async function signInWithEmail(email: string, password: string): Promise<UserCredential> {
+  try {
+    return await signInWithEmailAndPassword(auth, email.trim(), password);
+  } catch (error: any) {
+    console.error('Error in signInWithEmail:', error);
+    throw error;
+  }
+}
+
+/**
+ * Register a new user with email, password, displayName and role, and initialize Firestore user profile
+ */
+export async function signUpWithEmail(
+  email: string,
+  password: string,
+  displayName: string,
+  role: UserRole = 'PRACTITIONER'
+): Promise<{ user: User; profile: UserProfile }> {
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+    const user = cred.user;
+    if (displayName && user) {
+      try {
+        await updateProfile(user, { displayName });
+      } catch (profErr) {
+        console.warn('Could not update Auth displayName:', profErr);
+      }
+    }
+
+    const profile: UserProfile = {
+      id: user.uid,
+      uid: user.uid,
+      name: displayName || email.split('@')[0] || 'NDIS Specialist',
+      displayName: displayName || undefined,
+      email: user.email || email.trim(),
+      role: role,
+      position:
+        role === 'ADMIN'
+          ? 'Clinical Director'
+          : role === 'SUPPORT_COORDINATOR'
+          ? 'Support Coordinator'
+          : role === 'VIEWER'
+          ? 'Auditor / Viewer'
+          : 'Behaviour Support Practitioner',
+      practitionerId: `prac-${user.uid.slice(-4)}`,
+      workerScreeningStatus: 'Active',
+      workerScreeningExpiry: '2028-12-31',
+      policeCheckExpiry: '2027-12-31',
+      ndisOrientationDone: true,
+      activeCaseload: 0,
+      lastLogin: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    try {
+      await setDoc(doc(db, 'users', user.uid), profile, { merge: true });
+    } catch (saveErr) {
+      console.warn('Could not persist new user profile to Firestore:', saveErr);
+    }
+
+    return { user, profile };
+  } catch (error: any) {
+    console.error('Error in signUpWithEmail:', error);
+    throw error;
+  }
+}
+
+/**
+ * Trigger password reset email via Firebase Auth
+ */
+export async function resetUserPassword(email: string): Promise<void> {
+  try {
+    await sendPasswordResetEmail(auth, email.trim());
+  } catch (error: any) {
+    console.error('Error in resetUserPassword:', error);
+    throw error;
+  }
+}
+
+export {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  browserLocalPersistence,
+  getStorage
+};
+

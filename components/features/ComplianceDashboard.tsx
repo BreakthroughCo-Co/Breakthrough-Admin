@@ -6,6 +6,7 @@ import { useManagementStore } from '@/stores/useManagementStore';
 import { Practitioner, Client } from '@/types';
 import { ComplianceReportModal } from './ComplianceReportModal';
 import { ComplianceReportingSubModule } from './ComplianceReportingSubModule';
+import { AuditBundleModal } from './AuditBundleModal';
 import {
   ResponsiveContainer,
   BarChart,
@@ -58,6 +59,7 @@ export const ComplianceDashboard: React.FC = () => {
 
   const [activeComplianceSubTab, setActiveComplianceSubTab] = useState<'OVERVIEW' | 'COMPLIANCE_REPORTING' | 'ACCREDITATIONS'>('OVERVIEW');
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isAuditBundleOpen, setIsAuditBundleOpen] = useState(false);
   const [activeAlertFilter, setActiveAlertFilter] = useState<'all' | 'training' | 'incidents' | 'safeguards'>('all');
   const [broadcastFeedback, setBroadcastFeedback] = useState<string | null>(null);
   const [notifiedAlertIds, setNotifiedAlertIds] = useState<Record<string, boolean>>({});
@@ -534,6 +536,14 @@ Return a valid JSON object matching this structure:
           >
             <Download className="w-4 h-4 text-teal-200" />
             <span>Monthly PDF Reporting Engine</span>
+          </button>
+          <button
+            id="export-section34-audit-bundle-btn"
+            onClick={() => setIsAuditBundleOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-teal-300 rounded-xl font-bold text-xs shadow-md transition-all border border-teal-500/30"
+          >
+            <ShieldCheck className="w-4 h-4 text-teal-400" />
+            <span>Section 34 Audit Bundler</span>
           </button>
           <div className="flex items-center gap-2 bg-slate-950 px-3 py-2 rounded-xl border border-slate-800">
             <Award className="w-4 h-4 text-amber-400" />
@@ -1550,6 +1560,12 @@ Return a valid JSON object matching this structure:
       <ComplianceReportModal
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}
+      />
+
+      {/* Section 34 NDIS Audit Evidence Bundle Exporter Modal */}
+      <AuditBundleModal
+        isOpen={isAuditBundleOpen}
+        onClose={() => setIsAuditBundleOpen(false)}
       />
     </div>
   );

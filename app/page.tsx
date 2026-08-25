@@ -31,6 +31,8 @@ import { BillingModule } from '@/components/features/BillingModule';
 import { HRModule } from '@/components/features/HRModule';
 import { AuditLogsModule } from '@/components/features/AuditLogsModule';
 import { IntegrationsModule } from '@/components/features/IntegrationsModule';
+import { ParticipantPortalView } from '@/components/features/ParticipantPortalView';
+import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
 
 const ModuleLoadingFallback = ({ title }: { title: string }) => (
   <div className="flex flex-col items-center justify-center min-h-[360px] py-16 space-y-4 rounded-2xl bg-slate-900/30 border border-slate-800/50">
@@ -163,7 +165,12 @@ export default function Page() {
             <IntegrationsModule />
           </AccessGuard>
         );
+      case 'participant-portal':
+        return <ParticipantPortalView />;
       default:
+        if (currentUser?.role === 'PARTICIPANT') {
+          return <ParticipantPortalView />;
+        }
         return <GoogleWorkspaceHub />;
     }
   };
@@ -198,6 +205,7 @@ export default function Page() {
         </div>
       )}
 
+      <PWAInstallPrompt />
       <CommandPalette />
     </div>
   );

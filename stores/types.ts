@@ -40,7 +40,8 @@ export type TabType =
   | 'billing'
   | 'hr-roster'
   | 'audit-logs'
-  | 'integrations';
+  | 'integrations'
+  | 'participant-portal';
 
 export interface AuthSlice {
   currentUser: UserProfile;
@@ -57,6 +58,7 @@ export interface AuthSlice {
   isPractitioner: () => boolean;
   isViewer: () => boolean;
   isSupportCoordinator: () => boolean;
+  isParticipant: () => boolean;
   switchUser: (id: string) => void;
   setUserRole: (role: UserRole) => void;
 }

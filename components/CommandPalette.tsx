@@ -21,7 +21,8 @@ import {
   UserCheck,
   Clock,
   Compass,
-  Target
+  Target,
+  BarChart3
 } from 'lucide-react';
 
 export const CommandPalette: React.FC = () => {
@@ -35,12 +36,13 @@ export const CommandPalette: React.FC = () => {
     incidents,
     practitioners,
     restrictivePractices,
+    abcLogs,
     setActiveTab,
     setSelectedClientId
   } = useManagementStore();
 
   const [query, setQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<'ALL' | 'CLIENT' | 'CASE_NOTE' | 'PRACTITIONER' | 'BILLING' | 'INCIDENT' | 'RESTRICTIVE_PRACTICE'>('ALL');
+  const [selectedCategory, setSelectedCategory] = useState<'ALL' | 'CLIENT' | 'CASE_NOTE' | 'PRACTITIONER' | 'BILLING' | 'INCIDENT' | 'RESTRICTIVE_PRACTICE' | 'ABC_LOG'>('ALL');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -71,7 +73,7 @@ export const CommandPalette: React.FC = () => {
     }
   }, [isCommandPaletteOpen]);
 
-  // Run Cross-Module Fuzzy Search Indexer
+  // Run Cross-Module Semantic & Fuzzy Search Indexer
   const searchResults = useMemo(() => {
     if (!query.trim()) return [];
 
@@ -84,13 +86,14 @@ export const CommandPalette: React.FC = () => {
       billingClaims,
       incidents,
       restrictivePractices,
-      limit: 25,
+      abcLogs,
+      limit: 30,
     });
 
     if (isAdminUser) return rawResults;
 
     return rawResults.filter((r) => !adminTabs.includes(r.targetTab));
-  }, [query, selectedCategory, clients, caseNotes, practitioners, billingClaims, incidents, restrictivePractices, isAdminUser]);
+  }, [query, selectedCategory, clients, caseNotes, practitioners, billingClaims, incidents, restrictivePractices, abcLogs, isAdminUser]);
 
   // Reset selected index when query or category changes
   useEffect(() => {
@@ -137,7 +140,7 @@ export const CommandPalette: React.FC = () => {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Fuzzy search clients, active case notes, invoices, staff, incidents, or restrictive practices..."
+            placeholder="Search with natural language (e.g. 'incidents in last 6 months', 'unused budget over $5000', 'anxiety notes')..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleInputKeyDown}
@@ -187,6 +190,17 @@ export const CommandPalette: React.FC = () => {
           >
             <FileText className="w-3 h-3" />
             <span>Case Notes</span>
+          </button>
+          <button
+            onClick={() => setSelectedCategory('ABC_LOG')}
+            className={`px-2.5 py-1 rounded-lg font-bold transition-all whitespace-nowrap flex items-center gap-1 ${
+              selectedCategory === 'ABC_LOG'
+                ? 'bg-teal-500 text-slate-950 shadow'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <BarChart3 className="w-3 h-3" />
+            <span>ABC Logs</span>
           </button>
           <button
             onClick={() => setSelectedCategory('BILLING')}
@@ -240,9 +254,9 @@ export const CommandPalette: React.FC = () => {
             <div className="py-4 text-center text-slate-400 space-y-4">
               <div className="space-y-1">
                 <Command className="w-7 h-7 text-teal-400 mx-auto opacity-80" />
-                <p className="font-semibold text-slate-200">Universal Breakthrough OS Fuzzy Search Index</p>
+                <p className="font-semibold text-slate-200">AI Natural Language Semantic Search Engine</p>
                 <p className="text-[11px] text-slate-400 max-w-md mx-auto">
-                  Type any participant name, clinical SOAP/DAP case note snippet, invoice #, staff qualification, or incident to search across all operational databases with typo-tolerant fuzzy matching.
+                  Ask plain-language questions across all participants, clinical notes, ABC behavior observations, NDIS billing claims, staff qualifications, or critical incidents.
                 </p>
               </div>
 
@@ -265,6 +279,13 @@ export const CommandPalette: React.FC = () => {
                   >
                     <FileText className="w-4 h-4 text-sky-400" />
                     <span>Clinical Case Notes</span>
+                  </button>
+                  <button
+                    onClick={() => handleNavigate('abc-analyser')}
+                    className="p-2.5 bg-slate-950 hover:bg-slate-800 text-emerald-300 rounded-xl border border-slate-800 text-xs font-semibold flex items-center gap-2 transition-all"
+                  >
+                    <BarChart3 className="w-4 h-4 text-emerald-400" />
+                    <span>ABC Analyser & PBS</span>
                   </button>
                   <button
                     onClick={() => handleNavigate('incidents')}
@@ -297,13 +318,6 @@ export const CommandPalette: React.FC = () => {
                       <span>NDIS Goal Tracker</span>
                     </button>
                   )}
-                  <button
-                    onClick={() => handleNavigate('audit')}
-                    className="p-2.5 bg-slate-950 hover:bg-slate-800 text-amber-300 rounded-xl border border-slate-800 text-xs font-semibold flex items-center gap-2 transition-all"
-                  >
-                    <ShieldCheck className="w-4 h-4 text-amber-400" />
-                    <span>Compliance & Audit</span>
-                  </button>
                 </div>
               </div>
             </div>
@@ -314,17 +328,17 @@ export const CommandPalette: React.FC = () => {
               <Compass className="w-8 h-8 text-slate-600 mx-auto" />
               <p className="font-bold text-slate-300">No matching records found for &quot;{query}&quot;</p>
               <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
-                Try searching for partial names, NDIS IDs (e.g. 430891204), clinical notes text, or support category terms.
+                Try querying in natural language (e.g. &quot;incidents involving self-harm&quot;, &quot;unpaid claims over $1000&quot;, or &quot;anxiety during transition notes&quot;).
               </p>
             </div>
           )}
 
-          {/* Fuzzy Search Results Stream */}
+          {/* Semantic & Fuzzy Search Results Stream */}
           {searchResults.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                <span>Indexed Results ({searchResults.length})</span>
-                <span className="text-teal-400 font-mono">Fuzzy Index Match Active</span>
+                <span>Semantic & NLP Results ({searchResults.length})</span>
+                <span className="text-teal-400 font-mono">Relevance Rank Active</span>
               </div>
 
               <div className="space-y-1.5">
@@ -356,7 +370,10 @@ export const CommandPalette: React.FC = () => {
                         </div>
 
                         <p className="text-[11px] text-slate-300 font-medium">{item.subtitle}</p>
-                        <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">{item.snippet}</p>
+                        <p
+                          className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed"
+                          dangerouslySetInnerHTML={{ __html: item.snippet }}
+                        />
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0 self-center">
@@ -380,7 +397,7 @@ export const CommandPalette: React.FC = () => {
             <span><kbd className="font-mono text-slate-300 bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">Enter</kbd> to open</span>
           </div>
           <span className="text-teal-400 font-semibold flex items-center gap-1">
-            <Sparkles className="w-3 h-3" /> Breakthrough Cross-Module Index
+            <Sparkles className="w-3 h-3" /> Breakthrough Semantic Search
           </span>
         </div>
       </div>

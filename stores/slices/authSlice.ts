@@ -128,6 +128,10 @@ export const createAuthSlice: StateCreator<RootStore, [], [], AuthSlice> = (set,
     return role === 'SUPPORT_COORDINATOR' || role === 'ADMIN';
   },
 
+  isParticipant: () => {
+    return get().currentUser?.role === 'PARTICIPANT';
+  },
+
   switchUser: (id: string) => {
     const user = get().users.find((u) => u.id === id);
     if (user) {
