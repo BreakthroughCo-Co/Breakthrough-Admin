@@ -5,15 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "next dev -p 3000 -H 0.0.0.0",
-    "build": "NODE_ENV=production next build",
+    "build": "next build",
     "start": "node server.ts",
     "test": "node tests/runner.mjs",
     "lint": "next lint"
   },
   "dependencies": {
     "@google/genai": "^0.2.0",
+    "@types/express": "^5.0.6",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "express": "^5.2.1",
     "firebase": "^11.0.2",
     "lucide-react": "^0.460.0",
     "motion": "^11.11.17",
@@ -22,6 +24,7 @@
     "react-dom": "^19.0.0",
     "recharts": "^2.13.3",
     "tailwind-merge": "^2.5.5",
+    "xero-node": "^19.1.0",
     "zustand": "^5.0.1"
   },
   "devDependencies": {

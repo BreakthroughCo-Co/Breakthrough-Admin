@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { KeepNoteItem, CATEGORY_CONFIG } from './GoogleKeepModule';
-import { Client } from '@/types';
+import { KeepNoteItem, Client } from '@/types';
 import {
   FileText,
   Printer,
@@ -264,7 +263,6 @@ Status: Verified & Submitted for Formal Care File Filing
               {notes.map((note, index) => {
                 const client = clients.find((c) => c.id === note.clientId);
                 const summary = note.executiveSummary || localSummaries[note.id];
-                const categoryCfg = CATEGORY_CONFIG[note.category] || CATEGORY_CONFIG.Clinical;
 
                 return (
                   <div

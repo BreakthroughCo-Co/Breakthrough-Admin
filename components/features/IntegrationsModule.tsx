@@ -29,7 +29,7 @@ import {
 interface WebhookLog {
   id: string;
   timestamp: string;
-  service: 'PRODA PACE' | 'XERO Accounting' | 'SendGrid Mail' | 'Twilio SMS' | 'Gemini AI' | 'Firestore DB';
+  service: '17hats CRM' | 'PRODA PACE' | 'XERO Accounting' | 'SendGrid Mail' | 'Twilio SMS' | 'Gemini AI' | 'Firestore DB';
   endpoint: string;
   method: 'POST' | 'GET' | 'PUT';
   statusCode: number;
@@ -38,6 +38,16 @@ interface WebhookLog {
 }
 
 const INITIAL_WEBHOOK_LOGS: WebhookLog[] = [
+  {
+    id: 'wh-100',
+    timestamp: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
+    service: '17hats CRM',
+    endpoint: '/api/webhooks/17hats',
+    method: 'POST',
+    statusCode: 200,
+    latencyMs: 65,
+    payloadSummary: 'Received lead_created webhook: Jordan Miller intake form routed to Gemini background processor',
+  },
   {
     id: 'wh-101',
     timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
@@ -310,11 +320,20 @@ export const IntegrationsModule: React.FC = () => {
 
           <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2">
             <button
-              onClick={() => handleTestGateway('XERO Accounting', '/api.xro/2.0/Organisation')}
+              onClick={() => handleTestGateway('XERO Accounting', '/api/auth/xero')}
               className="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-sky-300 font-bold text-[11px] rounded border border-slate-700 text-center transition-all"
             >
               Test Xero API Handshake
             </button>
+            <a
+              href="/api/auth/xero"
+              target="_blank"
+              rel="noreferrer"
+              className="px-2.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-bold text-[11px] rounded transition-all flex items-center gap-1"
+              title="Connect Xero Account via OAuth 2.0"
+            >
+              Authorize <ExternalLink className="w-3 h-3" />
+            </a>
           </div>
         </div>
 
@@ -359,25 +378,25 @@ export const IntegrationsModule: React.FC = () => {
           </div>
         </div>
 
-        {/* 4. Google Gemini 3.5 AI Engine */}
+        {/* 4. Google Gemini AI Engine */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-white flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-purple-400" />
-                Google Gemini 3.5 AI Engine
+                Google Gemini AI Engine
               </span>
               <span className="text-[10px] bg-purple-500/10 text-purple-400 border border-purple-500/20 font-bold px-2 py-0.5 rounded font-mono flex items-center gap-1">
                 <Check className="w-3 h-3" /> Server-Side Key
               </span>
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              Automated Behaviour Support Plan generator, ABC incident pattern analyser & social story creator.
+              Automated Behaviour Support Plan generator, ABC incident pattern analyser & clinical notes summarization.
             </p>
             <div className="bg-slate-950 p-2 rounded border border-slate-800 text-[10px] font-mono space-y-1">
               <div className="flex justify-between text-slate-400">
-                <span>Model Alias:</span>
-                <span className="text-white font-bold">gemini-3.5-flash</span>
+                <span>Model:</span>
+                <span className="text-white font-bold">gemini-2.0-flash</span>
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>Latency:</span>
@@ -392,10 +411,77 @@ export const IntegrationsModule: React.FC = () => {
 
           <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2">
             <button
-              onClick={() => handleTestGateway('Gemini AI', '/models/gemini-3.5-flash:generateContent')}
+              onClick={() => handleTestGateway('Gemini AI', '/api/gemini/generate')}
               className="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold text-[11px] rounded border border-slate-700 text-center transition-all"
             >
               Ping Gemini Model
+            </button>
+          </div>
+        </div>
+
+        {/* 5. 17hats CRM Automated Webhook Ingestion */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-white flex items-center gap-2">
+                <Globe className="w-4 h-4 text-amber-400" />
+                17hats CRM Webhook Engine
+              </span>
+              <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold px-2 py-0.5 rounded font-mono flex items-center gap-1">
+                <Check className="w-3 h-3" /> /api/webhooks/17hats
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Instant 200 OK webhook receipt acknowledgment with Gemini background AI execution for intake and client synchronization.
+            </p>
+            <div className="bg-slate-950 p-2 rounded border border-slate-800 text-[10px] font-mono space-y-1">
+              <div className="flex justify-between text-slate-400">
+                <span>Endpoint:</span>
+                <span className="text-amber-400 font-bold">/api/webhooks/17hats</span>
+              </div>
+              <div className="flex justify-between text-slate-400">
+                <span>Triggers:</span>
+                <span className="text-slate-300">Leads, Invoices, Contracts</span>
+              </div>
+              <div className="flex justify-between text-slate-400">
+                <span>Background Task:</span>
+                <span className="text-emerald-400 font-bold">Gemini Sync Enabled</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2">
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch('/api/webhooks/17hats', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      event_name: 'lead_created',
+                      data: {
+                        client_name: 'Jordan Miller',
+                        service_requested: 'Behaviour Support & Coaching',
+                        contact_email: 'jordan.m@example.com'
+                      }
+                    })
+                  });
+                  await res.json();
+                  handleTestGateway('17hats CRM', '/api/webhooks/17hats');
+                  addNotification({
+                    title: '17hats Webhook Acknowledged',
+                    message: 'Event "lead_created" received 200 OK and queued for Gemini processing.',
+                    type: 'crm',
+                    severity: 'info',
+                    linkTab: 'integrations'
+                  });
+                } catch {
+                  handleTestGateway('17hats CRM', '/api/webhooks/17hats');
+                }
+              }}
+              className="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-[11px] rounded border border-slate-700 text-center transition-all"
+            >
+              Simulate 17hats Webhook
             </button>
           </div>
         </div>

@@ -6,7 +6,10 @@ import {
   signInWithGoogle,
   getCachedAccessToken,
   logOutGoogle,
-  initAuth
+  initAuth,
+  requestWorkspaceScopes,
+  WORKSPACE_SCOPES,
+  auth
 } from '@/lib/firebase';
 import {
   listDriveFiles,
@@ -294,7 +297,7 @@ export function GoogleWorkspaceHub() {
     setLoading(true);
     setActionMessage(null);
     try {
-      const res = await signInWithGoogle();
+      const res = await requestWorkspaceScopes(WORKSPACE_SCOPES);
       if (res.accessToken) {
         setAccessToken(res.accessToken);
         setUserEmail(res.user.email);

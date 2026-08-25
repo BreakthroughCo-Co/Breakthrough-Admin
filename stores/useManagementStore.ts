@@ -1350,14 +1350,20 @@ export const useManagementStore = create<ManagementState>((set, get) => ({
       return null;
     }
     set({ authLoading: true });
+    const isDirectorOrAdmin =
+      (firebaseUser.email && (firebaseUser.email.includes('admin') || firebaseUser.email.includes('director'))) ?? false;
+    const role: UserRole = isDirectorOrAdmin ? 'ADMIN' : 'PRACTITIONER';
+
     try {
-      let profile = await getUserProfile(firebaseUser.uid);
+      let profile: UserProfile | null = null;
+      try {
+        profile = await getUserProfile(firebaseUser.uid);
+      } catch (fetchErr: any) {
+        console.warn('Could not fetch user profile from Firestore (offline or initial connection):', fetchErr?.message || fetchErr);
+      }
+
       if (!profile) {
         // Auto-bootstrap profile on first sign-in
-        const isDirectorOrAdmin =
-          (firebaseUser.email && (firebaseUser.email.includes('admin') || firebaseUser.email.includes('director'))) ?? false;
-        const role: UserRole = isDirectorOrAdmin ? 'ADMIN' : 'PRACTITIONER';
-
         profile = {
           id: firebaseUser.uid,
           uid: firebaseUser.uid,
@@ -1379,20 +1385,20 @@ export const useManagementStore = create<ManagementState>((set, get) => ({
           updatedAt: new Date().toISOString()
         };
         await saveUserProfile(profile).catch((err) =>
-          console.warn('Could not persist new user profile to Firestore:', err)
+          console.warn('Could not persist new user profile to Firestore:', err?.message || err)
         );
       }
       set({ currentUser: profile, isAuthenticated: true, authLoading: false });
       return profile;
     } catch (err) {
-      console.error('handleAuthUser error:', err);
+      console.warn('handleAuthUser fallback engaged:', err);
       const fallback: UserProfile = {
         id: firebaseUser.uid,
         uid: firebaseUser.uid,
         name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'NDIS Specialist',
         email: firebaseUser.email || '',
-        role: 'PRACTITIONER',
-        position: 'Behaviour Support Practitioner',
+        role: role,
+        position: isDirectorOrAdmin ? 'Clinical Director' : 'Behaviour Support Practitioner',
         workerScreeningStatus: 'Active',
         workerScreeningExpiry: '2028-12-31',
         policeCheckExpiry: '2027-12-31',

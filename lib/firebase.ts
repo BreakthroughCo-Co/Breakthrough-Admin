@@ -69,22 +69,21 @@ if (typeof window !== 'undefined') {
 
 function getFirestoreInstance(): Firestore {
   const databaseId = (appletConfig as any).firestoreDatabaseId;
-  if (typeof window !== 'undefined') {
-    try {
-      const cacheSettings = {
-        localCache: persistentLocalCache({
-          tabManager: persistentMultipleTabManager()
-        })
-      };
-      return databaseId
-        ? initializeFirestore(app, cacheSettings, databaseId)
-        : initializeFirestore(app, cacheSettings);
-    } catch (err) {
-      console.warn('Persistent multi-tab cache initialization failed, falling back to getFirestore:', err);
-      return databaseId ? getFirestore(app, databaseId) : getFirestore(app);
-    }
+  if (typeof window === 'undefined') {
+    return databaseId ? getFirestore(app, databaseId) : getFirestore(app);
   }
-  return databaseId ? getFirestore(app, databaseId) : getFirestore(app);
+  try {
+    const cacheSettings = {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      })
+    };
+    return databaseId
+      ? initializeFirestore(app, cacheSettings, databaseId)
+      : initializeFirestore(app, cacheSettings);
+  } catch {
+    return databaseId ? getFirestore(app, databaseId) : getFirestore(app);
+  }
 }
 
 export const db: Firestore = getFirestoreInstance();
@@ -137,31 +136,46 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
-const provider = new GoogleAuthProvider();
-WORKSPACE_SCOPES.forEach((scope) => {
-  provider.addScope(scope);
-});
-provider.setCustomParameters({
-  prompt: 'consent',
-  access_type: 'offline'
-});
+// Lightweight base provider for standard authentication
+const baseProvider = new GoogleAuthProvider();
+baseProvider.addScope('profile');
+baseProvider.addScope('email');
+baseProvider.addScope('openid');
 
 // In-memory token storage (MANDATORY: Never store access token in localStorage/sessionStorage)
 let cachedAccessToken: string | null = null;
-let isSigningIn = false;
 
 export const signInWithGoogle = async (): Promise<{ user: User; accessToken: string | null }> => {
   try {
-    isSigningIn = true;
-    const result: UserCredential = await signInWithPopup(auth, provider);
+    const result: UserCredential = await signInWithPopup(auth, baseProvider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     cachedAccessToken = credential?.accessToken || null;
     return { user: result.user, accessToken: cachedAccessToken };
   } catch (error: any) {
-    console.error('Error signing in with Google Workspace scopes:', error);
+    console.error('Error signing in with Google:', error);
     throw error;
-  } finally {
-    isSigningIn = false;
+  }
+};
+
+export const requestWorkspaceScopes = async (
+  scopes: string[] = WORKSPACE_SCOPES
+): Promise<{ user: User; accessToken: string | null }> => {
+  try {
+    const scopeProvider = new GoogleAuthProvider();
+    scopes.forEach((scope) => {
+      scopeProvider.addScope(scope);
+    });
+    scopeProvider.setCustomParameters({
+      prompt: 'consent',
+      access_type: 'offline'
+    });
+    const result: UserCredential = await signInWithPopup(auth, scopeProvider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    cachedAccessToken = credential?.accessToken || null;
+    return { user: result.user, accessToken: cachedAccessToken };
+  } catch (error: any) {
+    console.error('Error requesting Google Workspace scopes:', error);
+    throw error;
   }
 };
 

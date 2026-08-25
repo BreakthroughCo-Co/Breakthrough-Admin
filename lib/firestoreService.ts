@@ -49,7 +49,15 @@ export async function fetchCollection<T>(
     const q = queryConstraints.length > 0 ? query(colRef, ...queryConstraints) : query(colRef);
     const snapshot = await getDocs(q);
     return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as unknown as T));
-  } catch (error) {
+  } catch (error: any) {
+    if (
+      error?.message?.includes('client is offline') ||
+      error?.code === 'unavailable' ||
+      error?.code === 'failed-precondition'
+    ) {
+      console.warn(`[Firestore] Collection ${collectionName} offline/unavailable, operating with local state.`);
+      return [];
+    }
     handleFirestoreError(error, OperationType.LIST, collectionName);
   }
 }
@@ -60,7 +68,16 @@ export async function getDocument<T>(collectionName: string, id: string): Promis
     const snapshot = await getDoc(docRef);
     if (!snapshot.exists()) return null;
     return { ...snapshot.data(), id: snapshot.id } as unknown as T;
-  } catch (error) {
+  } catch (error: any) {
+    if (
+      error?.message?.includes('client is offline') ||
+      error?.code === 'unavailable' ||
+      error?.code === 'not-found' ||
+      error?.code === 'failed-precondition'
+    ) {
+      console.warn(`[Firestore] Document ${collectionName}/${id} offline/unavailable, operating with local state.`);
+      return null;
+    }
     handleFirestoreError(error, OperationType.GET, `${collectionName}/${id}`);
   }
 }
@@ -444,7 +461,15 @@ export const fetchUserKeepNotes = async (userId: string): Promise<KeepNoteItem[]
     const colRef = collection(db, 'users', userId, 'keepNotes');
     const snapshot = await getDocs(colRef);
     return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as KeepNoteItem));
-  } catch (error) {
+  } catch (error: any) {
+    if (
+      error?.message?.includes('client is offline') ||
+      error?.code === 'unavailable' ||
+      error?.code === 'failed-precondition'
+    ) {
+      console.warn(`[Firestore] Keep notes for ${userId} offline, using local cache.`);
+      return [];
+    }
     handleFirestoreError(error, OperationType.LIST, `users/${userId}/keepNotes`);
   }
 };

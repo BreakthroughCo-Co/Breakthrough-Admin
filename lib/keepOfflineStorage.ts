@@ -1,6 +1,6 @@
 'use client';
 
-import { KeepNoteItem } from '@/components/features/GoogleKeepModule';
+import { KeepNoteItem } from '@/types';
 import { db } from '@/lib/firebase';
 import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 

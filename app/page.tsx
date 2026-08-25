@@ -85,11 +85,18 @@ export default function Page() {
     // Subscribe to Firebase Auth changes to automatically restore session without dropping
     const unsubscribe = onAuthUserChanged(async (firebaseUser) => {
       if (firebaseUser) {
-        await handleAuthUser(firebaseUser);
-        // Phase 1 — load all existing Firestore data into the store
-        await syncWithFirestore();
-        // Phase 3 — attach persistent onSnapshot listeners for real-time cross-tab updates
-        startRealtimeListeners();
+        try {
+          await handleAuthUser(firebaseUser);
+          // Phase 1 — load all existing Firestore data into the store
+          await syncWithFirestore().catch((err) =>
+            console.warn('Firestore initial sync notice (continuing with cached store data):', err?.message || err)
+          );
+          // Phase 3 — attach persistent onSnapshot listeners for real-time cross-tab updates
+          startRealtimeListeners();
+        } catch (err) {
+          console.warn('Auth restoration notice:', err);
+          useManagementStore.setState({ authLoading: false });
+        }
       } else {
         // User signed out — tear down real-time listeners
         stopRealtimeListeners();

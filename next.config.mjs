@@ -1,13 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  distDir: 'dist',
   eslint: {
     ignoreDuringBuilds: true,
   },
   typescript: {
     ignoreBuildErrors: true,
   },
-  serverExternalPackages: ['@google/genai'],
+  serverExternalPackages: ['@google/genai', 'xero-node', 'express'],
   devIndicators: false,
 };
 
