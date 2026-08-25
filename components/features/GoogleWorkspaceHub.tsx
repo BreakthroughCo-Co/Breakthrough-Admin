@@ -35,13 +35,17 @@ import {
   listGoogleKeepNotes,
   createGoogleKeepNote,
   deleteGoogleKeepNote,
+  listFilesInFolder,
+  createDriveFolder,
+  batchUploadFilesToDrive,
   GoogleDriveFile,
   GoogleCalendarEvent,
   GoogleContact,
   GoogleTask,
   GoogleMeetSpace,
   GoogleKeepNote,
-  PickedFileResult
+  PickedFileResult,
+  GooglePickerOptions
 } from '@/lib/workspace';
 import { GoogleFormsManager } from '@/components/features/GoogleFormsManager';
 import {
@@ -83,9 +87,17 @@ import {
   X,
   Copy,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   FileQuestion,
   StickyNote,
-  FolderSearch
+  FolderSearch,
+  FolderPlus,
+  Folder,
+  Folders,
+  File,
+  Download,
+  Check
 } from 'lucide-react';
 
 interface ConfirmationModalProps {
@@ -184,8 +196,15 @@ export function GoogleWorkspaceHub() {
   const [contacts, setContacts] = useState<GoogleContact[]>([]);
   const [tasks, setTasks] = useState<GoogleTask[]>([]);
 
-  // Google Picker State
+  // Google Picker & Drive Folder State
   const [pickedFile, setPickedFile] = useState<PickedFileResult | null>(null);
+  const [pickedFiles, setPickedFiles] = useState<PickedFileResult[]>([]);
+  const [pickedFolder, setPickedFolder] = useState<{ id: string; name: string; files: GoogleDriveFile[] } | null>(null);
+  const [targetFolderId, setTargetFolderId] = useState<string>('root');
+  const [isFolderExplorerExpanded, setIsFolderExplorerExpanded] = useState<boolean>(true);
+  const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState<boolean>(false);
+  const [newDriveFolderName, setNewDriveFolderName] = useState<string>('NDIS Participant Files & Evidence');
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; fileName: string } | null>(null);
 
   // Google Meet v2 Space State
   const [meetAccessType, setMeetAccessType] = useState<'OPEN' | 'TRUSTED' | 'RESTRICTED'>('OPEN');
@@ -357,58 +376,119 @@ export function GoogleWorkspaceHub() {
     });
   };
 
+  const handleRemoveSelectedFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleCreateFolderInDrive = async () => {
+    if (!accessToken || !newDriveFolderName.trim()) return;
+    setLoading(true);
+    try {
+      const parentId = targetFolderId !== 'root' ? targetFolderId : undefined;
+      const folder = await createDriveFolder(accessToken, newDriveFolderName.trim(), parentId);
+      setIsCreateFolderModalOpen(false);
+      setNewDriveFolderName('');
+      setTargetFolderId(folder.id);
+      setActionMessage({
+        type: 'success',
+        text: `Created folder "${folder.name}" in Google Drive!`,
+        link: folder.webViewLink
+      });
+      addAuditLog('CREATE', 'Drive Folder', folder.id, `Created Google Drive folder: ${folder.name}`);
+      await handleRefreshDrive();
+    } catch (e: any) {
+      setActionMessage({ type: 'error', text: `Failed to create folder: ${e.message}` });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleUploadDrive = async () => {
     if (!accessToken) return;
     setLoading(true);
+    setUploadProgress(null);
     try {
-      let res: GoogleDriveFile;
+      const destinationFolder = targetFolderId !== 'root' ? targetFolderId : undefined;
+
       if (uploadMode === 'file' && selectedFiles.length > 0) {
-        // Enforce 1GB limit
-        let totalSize = 0;
+        // Enforce 1GB limit per file
         for (const f of selectedFiles) {
-          totalSize += f.size;
           if (f.size > 1024 * 1024 * 1024) {
-            throw new Error(`File ${f.name} exceeds maximum allowed limit of 1GB (Current size: ${(f.size / (1024 * 1024)).toFixed(1)}MB)`);
+            throw new Error(
+              `File "${f.name}" exceeds maximum allowed limit of 1GB (Current size: ${(
+                f.size /
+                (1024 * 1024)
+              ).toFixed(1)}MB)`
+            );
           }
         }
-        
-        let lastRes: GoogleDriveFile | undefined;
-        for (const f of selectedFiles) {
-          lastRes = await uploadFileToDrive(
+
+        const uploadedList: GoogleDriveFile[] = [];
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const f = selectedFiles[i];
+          setUploadProgress({
+            current: i + 1,
+            total: selectedFiles.length,
+            fileName: f.name
+          });
+
+          const res = await uploadFileToDrive(
             accessToken,
             f.name,
             f,
-            f.type || 'application/octet-stream'
+            f.type || 'application/octet-stream',
+            destinationFolder
           );
-          addAuditLog('EXPORT', 'Drive File', lastRes.id, `Uploaded ${uploadCategory} file (${(f.size / 1024).toFixed(1)} KB): ${f.name}`);
+          uploadedList.push(res);
+          addAuditLog(
+            'EXPORT',
+            'Drive File',
+            res.id,
+            `Uploaded ${uploadCategory} file (${(f.size / 1024).toFixed(1)} KB): ${f.name}${
+              destinationFolder ? ` into folder [${destinationFolder}]` : ''
+            }`
+          );
         }
-        
-        setSelectedFiles([]);
-        
-        if (lastRes) {
-          setActionMessage({
-            type: 'success',
-            text: `Successfully uploaded ${selectedFiles.length} file(s) to Google Drive Company Storage!`,
-            link: lastRes.webViewLink // Just linking to the last one
-          });
-        }
-      } else {
-        res = await uploadFileToDrive(accessToken, uploadFileName, uploadFileContent, 'text/plain');
-        addAuditLog('EXPORT', 'Drive File', res.id, `Uploaded text file: ${uploadFileName}`);
-      }
 
-      if (uploadMode !== 'file') {
+        setSelectedFiles([]);
+        setUploadProgress(null);
+
+        const lastFile = uploadedList[uploadedList.length - 1];
         setActionMessage({
           type: 'success',
-          text: `Successfully uploaded "${res!.name}" to Google Drive Company Storage!`,
-          link: res!.webViewLink
+          text: `Successfully uploaded ${uploadedList.length} file(s) to Google Drive${
+            destinationFolder ? ' target folder' : ''
+          }!`,
+          link: lastFile?.webViewLink
+        });
+      } else {
+        const res = await uploadFileToDrive(
+          accessToken,
+          uploadFileName,
+          uploadFileContent,
+          'text/plain',
+          destinationFolder
+        );
+        addAuditLog(
+          'EXPORT',
+          'Drive File',
+          res.id,
+          `Uploaded text file: ${uploadFileName}${destinationFolder ? ` into folder [${destinationFolder}]` : ''}`
+        );
+
+        setActionMessage({
+          type: 'success',
+          text: `Successfully uploaded "${res.name}" to Google Drive Company Storage!`,
+          link: res.webViewLink
         });
       }
-      handleRefreshDrive();
+
+      await handleRefreshDrive();
     } catch (e: any) {
       setActionMessage({ type: 'error', text: `Upload failed: ${e.message}` });
     } finally {
       setLoading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -719,8 +799,10 @@ export function GoogleWorkspaceHub() {
     });
   };
 
-  // Google Picker Handler
-  const handleOpenGooglePicker = async () => {
+  // Google Picker Handler supporting multiple files and folder selection
+  const handleOpenGooglePicker = async (
+    mode: 'ALL' | 'FOLDERS' | 'DOCS' | 'SPREADSHEETS' | 'PDFS' = 'ALL'
+  ) => {
     if (!accessToken) {
       setActionMessage({ type: 'error', text: 'Sign in with Google to open Google Picker.' });
       return;
@@ -730,21 +812,81 @@ export function GoogleWorkspaceHub() {
       await launchGooglePicker(
         accessToken,
         (picked) => {
+          // Backward-compatible single item setter
           setPickedFile(picked);
-          setActionMessage({
-            type: 'success',
-            text: `Selected "${picked.name}" via Google Picker!`,
-            link: picked.url
-          });
-          addAuditLog('PICK', 'Google Picker', picked.id, `Picked file: ${picked.name} (${picked.mimeType})`);
         },
-        'ALL'
+        {
+          viewType: mode,
+          allowMultiSelect: true,
+          allowFolderSelect: true,
+          enableUploadTab: true,
+          onPickedFiles: (files, folderDetails) => {
+            setPickedFiles(files);
+            if (files.length > 0) {
+              setPickedFile(files[0]);
+            }
+            if (folderDetails) {
+              setPickedFolder(folderDetails);
+              setTargetFolderId(folderDetails.id);
+              setIsFolderExplorerExpanded(true);
+              setActionMessage({
+                type: 'success',
+                text: `Selected folder "${folderDetails.name}" containing ${folderDetails.files.length} file(s)!`,
+                link: `https://drive.google.com/drive/folders/${folderDetails.id}`
+              });
+              addAuditLog(
+                'PICK',
+                'Google Picker Folder',
+                folderDetails.id,
+                `Selected folder "${folderDetails.name}" with ${folderDetails.files.length} internal files`
+              );
+            } else if (files.length > 1) {
+              setActionMessage({
+                type: 'success',
+                text: `Selected ${files.length} files simultaneously via Google Picker!`
+              });
+              addAuditLog(
+                'PICK',
+                'Google Picker Multi',
+                files.map((f) => f.id).join(','),
+                `Picked ${files.length} files: ${files.map((f) => f.name).join(', ')}`
+              );
+            } else if (files.length === 1) {
+              setActionMessage({
+                type: 'success',
+                text: `Selected "${files[0].name}" via Google Picker!`,
+                link: files[0].url
+              });
+              addAuditLog(
+                'PICK',
+                'Google Picker',
+                files[0].id,
+                `Picked file: ${files[0].name} (${files[0].mimeType})`
+              );
+            }
+          }
+        }
       );
     } catch (e: any) {
       setActionMessage({ type: 'error', text: `Google Picker error: ${e.message}` });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleImportFolderFilesToVault = (folder: { id: string; name: string; files: GoogleDriveFile[] }) => {
+    for (const f of folder.files) {
+      addAuditLog(
+        'IMPORT',
+        'Drive Folder Item',
+        f.id,
+        `Linked folder item "${f.name}" (${f.mimeType}) from parent folder "${folder.name}"`
+      );
+    }
+    setActionMessage({
+      type: 'success',
+      text: `Successfully linked and registered all ${folder.files.length} files from folder "${folder.name}" into Practice Cloud Repository!`
+    });
   };
 
   // Google Meet v2 Space Creation Handler
@@ -1161,14 +1303,30 @@ export function GoogleWorkspaceHub() {
                       Secure company document repository for NDIS BSPs, Service Agreements, Clinical Evidence, and Billing claims.
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
-                      onClick={handleOpenGooglePicker}
+                      onClick={() => handleOpenGooglePicker('ALL')}
                       disabled={!accessToken || loading}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 rounded-lg transition disabled:opacity-50"
-                      title="Select files directly with Google Picker modal"
+                      title="Select multiple files or folders directly with Google Picker"
                     >
-                      <FolderSearch className="w-3.5 h-3.5 text-purple-400" /> Google Picker
+                      <FolderSearch className="w-3.5 h-3.5 text-purple-400" /> Google Picker (Multi-Select)
+                    </button>
+                    <button
+                      onClick={() => handleOpenGooglePicker('FOLDERS')}
+                      disabled={!accessToken || loading}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-lg transition disabled:opacity-50"
+                      title="Select a Google Drive Folder to inspect and import all contained files"
+                    >
+                      <Folder className="w-3.5 h-3.5 text-indigo-400" /> Pick Folder
+                    </button>
+                    <button
+                      onClick={() => setIsCreateFolderModalOpen(true)}
+                      disabled={!accessToken || loading}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 rounded-lg transition disabled:opacity-50"
+                      title="Create a new folder in Google Drive"
+                    >
+                      <FolderPlus className="w-3.5 h-3.5 text-blue-400" /> New Drive Folder
                     </button>
                     <button
                       onClick={handleRefreshDrive}
@@ -1180,8 +1338,153 @@ export function GoogleWorkspaceHub() {
                   </div>
                 </div>
 
-                {/* Google Picker Selected Banner */}
-                {pickedFile && (
+                {/* Google Picker Selected Folder Banner & File Explorer */}
+                {pickedFolder && (
+                  <div className="p-4 bg-indigo-950/40 border border-indigo-800/70 rounded-xl space-y-3 text-xs text-indigo-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 truncate">
+                        <div className="p-2 bg-indigo-900/60 rounded-lg border border-indigo-700/60">
+                          <Folder className="w-5 h-5 text-indigo-300" />
+                        </div>
+                        <div className="truncate">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-100 text-sm truncate">{pickedFolder.name}</span>
+                            <span className="text-[10px] bg-indigo-900/80 text-indigo-300 px-2 py-0.5 rounded border border-indigo-700/60 font-semibold">
+                              {pickedFolder.files.length} file(s) inside
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-indigo-300/80 truncate mt-0.5">
+                            Folder ID: <span className="font-mono text-[10px] text-indigo-400">{pickedFolder.id}</span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 shrink-0">
+                        <button
+                          onClick={() => setIsFolderExplorerExpanded(!isFolderExplorerExpanded)}
+                          className="px-2.5 py-1 bg-indigo-900/60 hover:bg-indigo-900 text-indigo-200 font-medium rounded text-[11px] flex items-center gap-1 border border-indigo-700/50"
+                        >
+                          {isFolderExplorerExpanded ? (
+                            <>
+                              <ChevronUp className="w-3.5 h-3.5" /> Collapse Files
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="w-3.5 h-3.5" /> View {pickedFolder.files.length} Files
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleImportFolderFilesToVault(pickedFolder)}
+                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded text-[11px] flex items-center gap-1 shadow-sm"
+                          title="Import metadata of all files from this folder into audit records"
+                        >
+                          <Check className="w-3.5 h-3.5" /> Import All Files to Vault
+                        </button>
+                        <a
+                          href={`https://drive.google.com/drive/folders/${pickedFolder.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded text-[11px] flex items-center gap-1"
+                        >
+                          Open Folder in Drive <ExternalLink className="w-3 h-3" />
+                        </a>
+                        <button
+                          onClick={() => setPickedFolder(null)}
+                          className="p-1 text-slate-400 hover:text-slate-200"
+                          title="Dismiss folder selection"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Expandable Table of Files Inside Picked Folder */}
+                    {isFolderExplorerExpanded && (
+                      <div className="mt-3 pt-3 border-t border-indigo-800/50">
+                        <div className="flex items-center justify-between text-[11px] text-indigo-300 mb-2 font-semibold">
+                          <span>Files inside &quot;{pickedFolder.name}&quot; ({pickedFolder.files.length}):</span>
+                          <span className="text-[10px] text-indigo-400 font-normal">Auto-synchronized via Google Picker API</span>
+                        </div>
+                        {pickedFolder.files.length === 0 ? (
+                          <div className="p-4 bg-indigo-950/30 rounded-lg text-center text-indigo-300 text-[11px]">
+                            This folder currently contains no child files. You can upload new files directly into it below!
+                          </div>
+                        ) : (
+                          <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1">
+                            {pickedFolder.files.map((file) => (
+                              <div
+                                key={file.id}
+                                className="flex items-center justify-between p-2 rounded-lg bg-indigo-950/60 hover:bg-indigo-900/40 border border-indigo-800/40 text-xs transition"
+                              >
+                                <div className="flex items-center gap-2 truncate">
+                                  <File className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                                  <span className="font-medium text-slate-200 truncate">{file.name}</span>
+                                  <span className="text-[10px] text-indigo-300/80 font-mono">
+                                    {file.size ? `${(parseInt(file.size, 10) / 1024).toFixed(1)} KB` : 'Doc/Folder'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {file.webViewLink && (
+                                    <a
+                                      href={file.webViewLink}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="px-2 py-0.5 text-[10px] font-medium bg-indigo-800/80 hover:bg-indigo-700 text-indigo-100 rounded flex items-center gap-1"
+                                    >
+                                      Open <ExternalLink className="w-2.5 h-2.5" />
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Multiple Individual Files Picked Banner */}
+                {pickedFiles.length > 1 && !pickedFolder && (
+                  <div className="p-3 bg-purple-950/40 border border-purple-800/60 rounded-xl space-y-2 text-xs text-purple-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FolderSearch className="w-4 h-4 text-purple-400 shrink-0" />
+                        <span className="font-bold text-slate-100">
+                          {pickedFiles.length} Files Selected via Google Picker
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setPickedFiles([]);
+                          setPickedFile(null);
+                        }}
+                        className="p-1 text-slate-400 hover:text-slate-200"
+                        title="Dismiss"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {pickedFiles.map((pf) => (
+                        <a
+                          key={pf.id}
+                          href={pf.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-1.5 px-2.5 py-1 bg-purple-900/50 hover:bg-purple-800 text-purple-200 rounded-lg border border-purple-700/50 text-[11px] transition"
+                        >
+                          <FileText className="w-3 h-3 text-purple-300" />
+                          <span className="font-medium truncate max-w-[150px]">{pf.name}</span>
+                          <ExternalLink className="w-2.5 h-2.5 text-purple-400" />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Single Google Picker Selected Banner */}
+                {pickedFile && pickedFiles.length <= 1 && !pickedFolder && (
                   <div className="p-3 bg-purple-950/30 border border-purple-800/60 rounded-xl flex items-center justify-between gap-3 text-xs text-purple-200">
                     <div className="flex items-center gap-2 truncate">
                       <FolderSearch className="w-4 h-4 text-purple-400 shrink-0" />
@@ -1200,7 +1503,10 @@ export function GoogleWorkspaceHub() {
                         Open Picked File <ExternalLink className="w-3 h-3" />
                       </a>
                       <button
-                        onClick={() => setPickedFile(null)}
+                        onClick={() => {
+                          setPickedFile(null);
+                          setPickedFiles([]);
+                        }}
                         className="p-1 text-slate-400 hover:text-slate-200"
                         title="Dismiss"
                       >
@@ -1213,14 +1519,14 @@ export function GoogleWorkspaceHub() {
                 {/* Storage & Format Capabilities Banner */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80">
-                    <div className="text-[11px] text-slate-400 font-medium">Single File Limit</div>
-                    <div className="text-sm font-bold text-blue-400 mt-0.5">1 GB / File</div>
-                    <div className="text-[10px] text-slate-500 mt-1">High-capacity binary & document uploads</div>
+                    <div className="text-[11px] text-slate-400 font-medium">Multi-File & Folder Support</div>
+                    <div className="text-sm font-bold text-blue-400 mt-0.5">Simultaneous Upload & Pick</div>
+                    <div className="text-[10px] text-slate-500 mt-1">Select folders or multiple files in one action</div>
                   </div>
                   <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80">
-                    <div className="text-[11px] text-slate-400 font-medium">Supported Formats</div>
-                    <div className="text-sm font-bold text-emerald-400 mt-0.5">All Major Types</div>
-                    <div className="text-[10px] text-slate-500 mt-1">PDF, DOCX, XLSX, CSV, JSON, Images, Audio, ZIP</div>
+                    <div className="text-[11px] text-slate-400 font-medium">Single File Capacity</div>
+                    <div className="text-sm font-bold text-emerald-400 mt-0.5">1 GB / File (1000+ Files)</div>
+                    <div className="text-[10px] text-slate-500 mt-1">PDF, DOCX, XLSX, CSV, MP4, Audio, ZIP</div>
                   </div>
                   <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80">
                     <div className="text-[11px] text-slate-400 font-medium">Storage Architecture</div>
@@ -1245,7 +1551,7 @@ export function GoogleWorkspaceHub() {
                             uploadMode === 'file' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
                           }`}
                         >
-                          Upload Files (1GB)
+                          Upload Files (Multiple / 1GB)
                         </button>
                         <button
                           type="button"
@@ -1260,6 +1566,39 @@ export function GoogleWorkspaceHub() {
                     </div>
 
                     <div className="space-y-3">
+                      {/* Target Destination Folder Selector */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[11px] text-slate-400">Target Google Drive Folder</label>
+                          <button
+                            type="button"
+                            onClick={() => setIsCreateFolderModalOpen(true)}
+                            className="text-[10px] text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
+                          >
+                            <FolderPlus className="w-3 h-3" /> New Folder
+                          </button>
+                        </div>
+                        <select
+                          value={targetFolderId}
+                          onChange={(e) => setTargetFolderId(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
+                        >
+                          <option value="root">📁 My Drive (Root Directory)</option>
+                          {pickedFolder && (
+                            <option value={pickedFolder.id}>
+                              📁 Selected Folder: {pickedFolder.name} ({pickedFolder.files.length} items)
+                            </option>
+                          )}
+                          {driveFiles
+                            .filter((f) => f.mimeType === 'application/vnd.google-apps.folder' && f.id !== pickedFolder?.id)
+                            .map((folder) => (
+                              <option key={folder.id} value={folder.id}>
+                                📁 {folder.name}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+
                       {/* Category Tag */}
                       <div>
                         <label className="text-[11px] text-slate-400 block mb-1">Document Category</label>
@@ -1279,7 +1618,9 @@ export function GoogleWorkspaceHub() {
 
                       {uploadMode === 'file' ? (
                         <div>
-                          <label className="text-[11px] text-slate-400 block mb-1">Select or Drag Files (Max 1GB)</label>
+                          <label className="text-[11px] text-slate-400 block mb-1">
+                            Select or Drag Files (Two or more files supported, Max 1GB each)
+                          </label>
                           <div
                             onDragOver={(e) => {
                               e.preventDefault();
@@ -1290,7 +1631,7 @@ export function GoogleWorkspaceHub() {
                               e.preventDefault();
                               setIsDragging(false);
                               if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                                setSelectedFiles(Array.from(e.dataTransfer.files));
+                                setSelectedFiles((prev) => [...prev, ...Array.from(e.dataTransfer.files)]);
                               }
                             }}
                             className={`border-2 border-dashed rounded-xl p-5 text-center transition cursor-pointer ${
@@ -1312,20 +1653,40 @@ export function GoogleWorkspaceHub() {
                               className="hidden"
                               onChange={(e) => {
                                 if (e.target.files && e.target.files.length > 0) {
-                                  setSelectedFiles(Array.from(e.target.files));
+                                  setSelectedFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
                                 }
                               }}
                             />
                             {selectedFiles.length > 0 ? (
-                              <div className="space-y-1">
+                              <div className="space-y-2">
                                 <div className="flex items-center justify-center gap-2 text-emerald-400 text-xs font-semibold">
-                                  <CheckCircle2 className="w-4 h-4" /> Selected: {selectedFiles.length} file(s)
+                                  <CheckCircle2 className="w-4 h-4" /> Ready to upload: {selectedFiles.length} file(s)
                                 </div>
                                 <div className="text-[11px] text-slate-400">
                                   Total Size: {(selectedFiles.reduce((acc, f) => acc + f.size, 0) / (1024 * 1024)).toFixed(2)} MB
                                 </div>
-                                <div className="pt-2">
-                                  <span className="text-[10px] text-blue-400 hover:underline">Click or drop more files to replace</span>
+                                <div className="pt-1 flex flex-wrap gap-1.5 justify-center max-h-32 overflow-y-auto">
+                                  {selectedFiles.map((file, idx) => (
+                                    <div
+                                      key={`${file.name}-${idx}`}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-800 text-slate-200 rounded text-[10px] border border-slate-700"
+                                    >
+                                      <span className="truncate max-w-[130px]">{file.name}</span>
+                                      <span className="text-slate-400">({(file.size / 1024).toFixed(0)}KB)</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveSelectedFile(idx)}
+                                        className="text-slate-400 hover:text-rose-400 ml-0.5"
+                                        title="Remove file from upload queue"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="pt-1">
+                                  <span className="text-[10px] text-blue-400 hover:underline">Click or drop more files to add to batch</span>
                                 </div>
                               </div>
                             ) : (
@@ -1334,10 +1695,10 @@ export function GoogleWorkspaceHub() {
                                   <Upload className="w-5 h-5" />
                                 </div>
                                 <div className="text-xs font-medium text-slate-200">
-                                  Drag & drop your files here, or <span className="text-blue-400 underline">browse</span>
+                                  Drag & drop multiple files here, or <span className="text-blue-400 underline">browse</span>
                                 </div>
                                 <div className="text-[10px] text-slate-500">
-                                  PDF, DOCX, XLSX, CSV, JSON, PNG, JPG, MP4, Audio, ZIP (Up to 1GB)
+                                  Select 2 or more files: PDF, DOCX, XLSX, CSV, JSON, PNG, JPG, MP4, Audio, ZIP (Up to 1GB)
                                 </div>
                               </div>
                             )}
@@ -1366,13 +1727,43 @@ export function GoogleWorkspaceHub() {
                         </>
                       )}
 
+                      {/* Live Batch Upload Progress Banner */}
+                      {uploadProgress && (
+                        <div className="p-3 bg-blue-950/40 border border-blue-800/60 rounded-xl space-y-1.5">
+                          <div className="flex items-center justify-between text-xs text-blue-300">
+                            <span className="font-medium flex items-center gap-1.5">
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-400" />
+                              Uploading file {uploadProgress.current} of {uploadProgress.total}...
+                            </span>
+                            <span className="font-semibold text-blue-200">
+                              {Math.round((uploadProgress.current / uploadProgress.total) * 100)}%
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 truncate">
+                            File: <span className="text-slate-200 font-mono">{uploadProgress.fileName}</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-blue-500 transition-all duration-300"
+                              style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
                       <button
                         onClick={handleUploadDrive}
                         disabled={!accessToken || loading || (uploadMode === 'file' && selectedFiles.length === 0)}
                         className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition disabled:opacity-50 shadow-sm"
                       >
                         <Upload className="w-3.5 h-3.5" />
-                        {loading ? 'Uploading...' : uploadMode === 'file' && selectedFiles.length > 0 ? `Upload ${selectedFiles.length} File(s) (1GB Max)` : 'Upload to Google Drive Storage'}
+                        {loading
+                          ? uploadProgress
+                            ? `Uploading ${uploadProgress.current}/${uploadProgress.total}...`
+                            : 'Uploading...'
+                          : uploadMode === 'file' && selectedFiles.length > 0
+                          ? `Upload ${selectedFiles.length} File(s) to ${targetFolderId === 'root' ? 'My Drive' : 'Selected Folder'}`
+                          : 'Upload to Google Drive Storage'}
                       </button>
                     </div>
                   </div>
@@ -2778,6 +3169,96 @@ export function GoogleWorkspaceHub() {
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* CREATE NEW DRIVE FOLDER MODAL */}
+      {isCreateFolderModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-5 space-y-4 shadow-xl text-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h3 className="text-sm font-bold flex items-center gap-2 text-slate-100">
+                <FolderPlus className="w-4 h-4 text-blue-400" /> Create Google Drive Folder
+              </h3>
+              <button
+                onClick={() => {
+                  setIsCreateFolderModalOpen(false);
+                  setNewFolderName('');
+                }}
+                className="text-slate-400 hover:text-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-[11px] text-slate-400 block mb-1">Folder Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Participant BSP Records 2026"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newFolderName.trim()) {
+                      handleCreateFolderInDrive();
+                    }
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] text-slate-400 block mb-1">Parent Location</label>
+                <select
+                  value={targetFolderId}
+                  onChange={(e) => setTargetFolderId(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
+                >
+                  <option value="root">📁 Root / My Drive</option>
+                  {pickedFolder && (
+                    <option value={pickedFolder.id}>
+                      📁 Inside Selected Folder: {pickedFolder.name}
+                    </option>
+                  )}
+                  {driveFiles
+                    .filter((f) => f.mimeType === 'application/vnd.google-apps.folder' && f.id !== pickedFolder?.id)
+                    .map((folder) => (
+                      <option key={folder.id} value={folder.id}>
+                        📁 Inside: {folder.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <p className="text-[11px] text-slate-400">
+                The created folder will immediately be set as the target destination for multi-file batch uploads.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCreateFolderModalOpen(false);
+                  setNewFolderName('');
+                }}
+                className="px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 rounded-lg transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateFolderInDrive}
+                disabled={!newFolderName.trim() || loading}
+                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
+              >
+                {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FolderPlus className="w-3.5 h-3.5" />}
+                Create Folder
+              </button>
+            </div>
           </div>
         </div>
       )}

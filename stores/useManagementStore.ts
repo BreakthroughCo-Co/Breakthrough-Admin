@@ -1351,64 +1351,54 @@ export const useManagementStore = create<ManagementState>((set, get) => ({
       set({ isAuthenticated: false, authLoading: false });
       return null;
     }
-    set({ authLoading: true });
     const isDirectorOrAdmin =
       (firebaseUser.email && (firebaseUser.email.includes('admin') || firebaseUser.email.includes('director'))) ?? false;
     const role: UserRole = isDirectorOrAdmin ? 'ADMIN' : 'PRACTITIONER';
 
-    try {
-      let profile: UserProfile | null = null;
-      try {
-        profile = await getUserProfile(firebaseUser.uid);
-      } catch (fetchErr: any) {
-        console.warn('Could not fetch user profile from Firestore (offline or initial connection):', fetchErr?.message || fetchErr);
-      }
+    const defaultProfile: UserProfile = {
+      id: firebaseUser.uid,
+      uid: firebaseUser.uid,
+      name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'NDIS Specialist',
+      displayName: firebaseUser.displayName || undefined,
+      email: firebaseUser.email || '',
+      role: role,
+      photoURL: firebaseUser.photoURL || undefined,
+      avatarUrl: firebaseUser.photoURL || undefined,
+      position: isDirectorOrAdmin ? 'Clinical Director' : 'Senior Behaviour Support Practitioner',
+      practitionerId: `prac-${firebaseUser.uid.slice(-4)}`,
+      workerScreeningStatus: 'Active',
+      workerScreeningExpiry: '2028-12-31',
+      policeCheckExpiry: '2027-12-31',
+      ndisOrientationDone: true,
+      activeCaseload: 0,
+      lastLogin: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
 
-      if (!profile) {
-        // Auto-bootstrap profile on first sign-in
-        profile = {
-          id: firebaseUser.uid,
-          uid: firebaseUser.uid,
-          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'NDIS Specialist',
-          displayName: firebaseUser.displayName || undefined,
-          email: firebaseUser.email || '',
-          role: role,
-          photoURL: firebaseUser.photoURL || undefined,
-          avatarUrl: firebaseUser.photoURL || undefined,
-          position: isDirectorOrAdmin ? 'Clinical Director' : 'Behaviour Support Practitioner',
-          practitionerId: `prac-${firebaseUser.uid.slice(-4)}`,
-          workerScreeningStatus: 'Active',
-          workerScreeningExpiry: '2028-12-31',
-          policeCheckExpiry: '2027-12-31',
-          ndisOrientationDone: true,
-          activeCaseload: 0,
-          lastLogin: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        await saveUserProfile(profile).catch((err) =>
-          console.warn('Could not persist new user profile to Firestore:', err?.message || err)
+    try {
+      // Race Firestore profile retrieval with a strict 1500ms timeout so the user never stalls
+      const profilePromise = getUserProfile(firebaseUser.uid);
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
+      const fetchedProfile = await Promise.race([profilePromise, timeoutPromise]).catch(() => null);
+
+      const activeProfile = fetchedProfile || defaultProfile;
+
+      // Immediately set user profile and grant authenticated status
+      set({ currentUser: activeProfile, isAuthenticated: true, authLoading: false });
+
+      // Save/update profile in background non-blockingly if it was freshly generated
+      if (!fetchedProfile) {
+        saveUserProfile(defaultProfile).catch((err) =>
+          console.warn('Background profile persist notice:', err?.message || err)
         );
       }
-      set({ currentUser: profile, isAuthenticated: true, authLoading: false });
-      return profile;
+
+      return activeProfile;
     } catch (err) {
       console.warn('handleAuthUser fallback engaged:', err);
-      const fallback: UserProfile = {
-        id: firebaseUser.uid,
-        uid: firebaseUser.uid,
-        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'NDIS Specialist',
-        email: firebaseUser.email || '',
-        role: role,
-        position: isDirectorOrAdmin ? 'Clinical Director' : 'Behaviour Support Practitioner',
-        workerScreeningStatus: 'Active',
-        workerScreeningExpiry: '2028-12-31',
-        policeCheckExpiry: '2027-12-31',
-        ndisOrientationDone: true,
-        activeCaseload: 0
-      };
-      set({ currentUser: fallback, isAuthenticated: true, authLoading: false });
-      return fallback;
+      set({ currentUser: defaultProfile, isAuthenticated: true, authLoading: false });
+      return defaultProfile;
     }
   },
 

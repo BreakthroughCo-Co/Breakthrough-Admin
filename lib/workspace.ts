@@ -167,16 +167,62 @@ export const deleteDriveFile = async (accessToken: string, fileId: string): Prom
   }
 };
 
+export const listFilesInFolder = async (
+  accessToken: string,
+  folderId: string
+): Promise<GoogleDriveFile[]> => {
+  const url = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+trashed=false&fields=files(id,name,mimeType,webViewLink,modifiedTime,size)&pageSize=1000&orderBy=name`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Failed to fetch folder contents: ${res.statusText}`);
+  }
+  const data = await res.json();
+  return data.files || [];
+};
+
+export const createDriveFolder = async (
+  accessToken: string,
+  name: string,
+  parentFolderId?: string
+): Promise<GoogleDriveFile> => {
+  const metadata: any = {
+    name,
+    mimeType: 'application/vnd.google-apps.folder'
+  };
+  if (parentFolderId) {
+    metadata.parents = [parentFolderId];
+  }
+
+  const res = await fetch('https://www.googleapis.com/drive/v3/files?fields=id,name,mimeType,webViewLink', {
+    method: 'POST',
+    headers: getHeaders(accessToken),
+    body: JSON.stringify(metadata)
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Failed to create folder in Drive: ${res.statusText}`);
+  }
+  return await res.json();
+};
+
 export const uploadFileToDrive = async (
   accessToken: string,
   name: string,
   content: string | Blob | ArrayBuffer | File,
-  mimeType = 'text/plain'
+  mimeType = 'text/plain',
+  folderId?: string
 ): Promise<GoogleDriveFile> => {
-  const metadata = {
+  const metadata: any = {
     name,
     mimeType
   };
+  if (folderId) {
+    metadata.parents = [folderId];
+  }
 
   const form = new FormData();
   form.append(
@@ -206,6 +252,33 @@ export const uploadFileToDrive = async (
     throw new Error(err.error?.message || `Failed to upload file to Drive: ${res.statusText}`);
   }
   return await res.json();
+};
+
+export const batchUploadFilesToDrive = async (
+  accessToken: string,
+  files: Array<{ name: string; content: string | Blob | ArrayBuffer | File; mimeType?: string }>,
+  folderId?: string,
+  onProgress?: (completed: number, total: number, currentFileName: string) => void
+): Promise<GoogleDriveFile[]> => {
+  const uploadedFiles: GoogleDriveFile[] = [];
+  for (let i = 0; i < files.length; i++) {
+    const item = files[i];
+    if (onProgress) {
+      onProgress(i, files.length, item.name);
+    }
+    const uploaded = await uploadFileToDrive(
+      accessToken,
+      item.name,
+      item.content,
+      item.mimeType || 'application/octet-stream',
+      folderId
+    );
+    uploadedFiles.push(uploaded);
+  }
+  if (onProgress) {
+    onProgress(files.length, files.length, 'Completed');
+  }
+  return uploadedFiles;
 };
 
 export const createGoogleSheet = async (
@@ -781,12 +854,34 @@ export interface PickedFileResult {
   url: string;
   mimeType: string;
   sizeBytes?: number;
+  isFolder?: boolean;
+  containedFiles?: GoogleDriveFile[];
+  parentFolderId?: string;
+}
+
+export interface GooglePickerOptions {
+  viewType?: 'ALL' | 'FOLDERS' | 'DOCS' | 'SPREADSHEETS' | 'PRESENTATIONS' | 'FORMS' | 'PDFS';
+  allowMultiSelect?: boolean;
+  allowFolderSelect?: boolean;
+  enableUploadTab?: boolean;
+  onPickedFiles?: (
+    files: PickedFileResult[],
+    folderDetails?: { id: string; name: string; files: GoogleDriveFile[] } | null
+  ) => void;
 }
 
 export const launchGooglePicker = async (
   accessToken: string,
   onPicked: (file: PickedFileResult) => void,
-  viewType: 'ALL' | 'DOCS' | 'SPREADSHEETS' | 'PRESENTATIONS' | 'FORMS' | 'PDFS' = 'ALL'
+  viewTypeOrOptions:
+    | 'ALL'
+    | 'FOLDERS'
+    | 'DOCS'
+    | 'SPREADSHEETS'
+    | 'PRESENTATIONS'
+    | 'FORMS'
+    | 'PDFS'
+    | GooglePickerOptions = 'ALL'
 ): Promise<void> => {
   await loadGooglePickerScript();
   const google = (window as any).google;
@@ -794,13 +889,45 @@ export const launchGooglePicker = async (
     throw new Error('Google Picker library is not ready.');
   }
 
+  const options: GooglePickerOptions =
+    typeof viewTypeOrOptions === 'object'
+      ? viewTypeOrOptions
+      : {
+          viewType: viewTypeOrOptions,
+          allowMultiSelect: true,
+          allowFolderSelect: true,
+          enableUploadTab: true
+        };
+
+  const viewType = options.viewType || 'ALL';
+  const allowMultiSelect = options.allowMultiSelect ?? true;
+  const allowFolderSelect = options.allowFolderSelect ?? true;
+  const enableUploadTab = options.enableUploadTab ?? true;
+
   const pickerOrigin =
     (window.location as any).ancestorOrigins && (window.location as any).ancestorOrigins.length > 0
       ? (window.location as any).ancestorOrigins[(window.location as any).ancestorOrigins.length - 1]
       : window.location.origin;
 
-  let view = new google.picker.DocsView(google.picker.ViewId.DOCS);
-  if (viewType === 'SPREADSHEETS') {
+  const builder = new google.picker.PickerBuilder()
+    .setOAuthToken(accessToken)
+    .setOrigin(pickerOrigin);
+
+  if (allowMultiSelect && google.picker.Feature?.MULTISELECT_ENABLED) {
+    builder.enableFeature(google.picker.Feature.MULTISELECT_ENABLED);
+  }
+  if (google.picker.Feature?.SUPPORT_DRIVES) {
+    builder.enableFeature(google.picker.Feature.SUPPORT_DRIVES);
+  }
+
+  // Configure Primary View
+  let view: any;
+  if (viewType === 'FOLDERS') {
+    view = new google.picker.DocsView(google.picker.ViewId.DOCS);
+    view.setMimeTypes('application/vnd.google-apps.folder');
+    view.setSelectFolderEnabled(true);
+    view.setIncludeFolders(true);
+  } else if (viewType === 'SPREADSHEETS') {
     view = new google.picker.DocsView(google.picker.ViewId.SPREADSHEETS);
   } else if (viewType === 'FORMS') {
     view = new google.picker.DocsView(google.picker.ViewId.FORMS);
@@ -811,28 +938,87 @@ export const launchGooglePicker = async (
   } else {
     view = new google.picker.DocsView(google.picker.ViewId.DOCS);
     view.setIncludeFolders(true);
+    if (allowFolderSelect) {
+      view.setSelectFolderEnabled(true);
+    }
   }
 
-  const picker = new google.picker.PickerBuilder()
-    .addView(view)
-    .setOAuthToken(accessToken)
-    .setOrigin(pickerOrigin)
-    .setCallback((data: any) => {
-      if (data.action === google.picker.Action.PICKED) {
-        const doc = data.docs?.[0];
-        if (doc) {
-          onPicked({
-            id: doc.id,
-            name: doc.name,
-            url: doc.url || `https://docs.google.com/open?id=${doc.id}`,
-            mimeType: doc.mimeType,
-            sizeBytes: doc.sizeBytes
-          });
-        }
-      }
-    })
-    .build();
+  builder.addView(view);
 
+  // Add dedicated Folder View if in ALL view for quick folder selection
+  if (viewType === 'ALL' && allowFolderSelect) {
+    const folderView = new google.picker.DocsView(google.picker.ViewId.FOLDERS || google.picker.ViewId.DOCS);
+    folderView.setMimeTypes('application/vnd.google-apps.folder');
+    folderView.setSelectFolderEnabled(true);
+    folderView.setIncludeFolders(true);
+    builder.addView(folderView);
+  }
+
+  // Add DocsUploadView if enabled so users can also batch-upload files inside the picker directly
+  if (enableUploadTab && google.picker.DocsUploadView) {
+    try {
+      const uploadView = new google.picker.DocsUploadView();
+      uploadView.setIncludeFolders(true);
+      if (uploadView.setMultiselect) {
+        uploadView.setMultiselect(true);
+      }
+      builder.addView(uploadView);
+    } catch (e) {
+      // Ignore if DocsUploadView is restricted in iframe
+    }
+  }
+
+  builder.setCallback(async (data: any) => {
+    if (data.action === google.picker.Action.PICKED) {
+      const rawDocs = data.docs || [];
+      if (rawDocs.length === 0) return;
+
+      const processedFiles: PickedFileResult[] = [];
+      let selectedFolderDetails: { id: string; name: string; files: GoogleDriveFile[] } | null = null;
+
+      for (const doc of rawDocs) {
+        const isFolder =
+          doc.mimeType === 'application/vnd.google-apps.folder' || doc.type === 'folder';
+
+        let containedFiles: GoogleDriveFile[] | undefined = undefined;
+        if (isFolder) {
+          try {
+            containedFiles = await listFilesInFolder(accessToken, doc.id);
+            selectedFolderDetails = {
+              id: doc.id,
+              name: doc.name,
+              files: containedFiles
+            };
+          } catch (err) {
+            console.warn('Could not auto-list files in picked folder:', err);
+          }
+        }
+
+        const pickedItem: PickedFileResult = {
+          id: doc.id,
+          name: doc.name,
+          url: doc.url || `https://docs.google.com/open?id=${doc.id}`,
+          mimeType: doc.mimeType || (isFolder ? 'application/vnd.google-apps.folder' : 'application/octet-stream'),
+          sizeBytes: doc.sizeBytes,
+          isFolder,
+          containedFiles
+        };
+        processedFiles.push(pickedItem);
+      }
+
+      // First call single-item callback for backwards compatibility with the primary/first item
+      if (processedFiles.length > 0) {
+        onPicked(processedFiles[0]);
+      }
+
+      // Call rich multi-file / folder callback if provided in options
+      if (options.onPickedFiles) {
+        options.onPickedFiles(processedFiles, selectedFolderDetails);
+      }
+    }
+  });
+
+  const picker = builder.build();
   picker.setVisible(true);
 };
 

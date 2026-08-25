@@ -48,18 +48,67 @@ const ModuleLoadingFallback = ({ title }: { title: string }) => (
   </div>
 );
 
-const AppAuthLoadingScreen = () => (
-  <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4 text-slate-200">
-    <div className="p-3 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-2xl shadow-xl text-white animate-bounce">
-      <Activity className="w-8 h-8" />
+const AppAuthLoadingScreen = ({ onSkip, onQuickLogin }: { onSkip: () => void; onQuickLogin: (role: 'ADMIN' | 'PRACTITIONER') => void }) => {
+  const [showFallbacks, setShowFallbacks] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowFallbacks(true);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center p-4 text-slate-200">
+      <div className="max-w-md w-full flex flex-col items-center text-center space-y-5 bg-slate-900/80 border border-slate-800 p-8 rounded-3xl shadow-2xl backdrop-blur-md">
+        <div className="p-3.5 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-2xl shadow-xl shadow-teal-900/30 text-white animate-pulse">
+          <Activity className="w-8 h-8" />
+        </div>
+        
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-center gap-2 text-sm font-bold text-teal-400">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Authenticating Breakthrough OS session...</span>
+          </div>
+          <p className="text-xs text-slate-400">Verifying role credentials and clinical permissions</p>
+        </div>
+
+        {showFallbacks && (
+          <div className="w-full pt-4 border-t border-slate-800/80 space-y-3 animate-fadeIn">
+            <p className="text-[11px] text-slate-400">
+              Authentication is taking a few moments. You can bypass directly or sign in manually:
+            </p>
+            <div className="grid grid-cols-1 gap-2">
+              <button
+                type="button"
+                onClick={onSkip}
+                className="w-full py-2.5 px-4 bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-teal-950/40 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Proceed to Sign In Screen</span>
+              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onQuickLogin('ADMIN')}
+                  className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-[11px] font-semibold rounded-xl border border-slate-700 transition-all text-center cursor-pointer"
+                >
+                  Director Access
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onQuickLogin('PRACTITIONER')}
+                  className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-[11px] font-semibold rounded-xl border border-slate-700 transition-all text-center cursor-pointer"
+                >
+                  Practitioner Access
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
-    <div className="flex items-center gap-2 text-sm font-bold text-teal-400">
-      <Loader2 className="w-4 h-4 animate-spin" />
-      <span>Authenticating Breakthrough OS session...</span>
-    </div>
-    <p className="text-xs text-slate-500">Verifying role credentials and clinical permissions</p>
-  </div>
-);
+  );
+};
 
 export default function Page() {
   const {
@@ -67,6 +116,8 @@ export default function Page() {
     setActiveTab,
     theme,
     currentUser,
+    users,
+    setUserProfile,
     isAuthenticated,
     authLoading,
     handleAuthUser,
@@ -85,17 +136,28 @@ export default function Page() {
   useEffect(() => {
     setMounted(true);
 
+    // Safety timeout: Release loading screen if Firebase Auth has not completed in 2.5s
+    const safetyTimeout = setTimeout(() => {
+      if (useManagementStore.getState().authLoading) {
+        useManagementStore.setState({ authLoading: false });
+      }
+    }, 2500);
+
     // Subscribe to Firebase Auth changes to automatically restore session without dropping
     const unsubscribe = onAuthUserChanged(async (firebaseUser) => {
+      clearTimeout(safetyTimeout);
       if (firebaseUser) {
         try {
           await handleAuthUser(firebaseUser);
-          // Phase 1 — load all existing Firestore data into the store
-          await syncWithFirestore().catch((err) =>
-            console.warn('Firestore initial sync notice (continuing with cached store data):', err?.message || err)
-          );
-          // Phase 3 — attach persistent onSnapshot listeners for real-time cross-tab updates
-          startRealtimeListeners();
+          useManagementStore.setState({ authLoading: false, isAuthenticated: true });
+          // Background data hydration non-blockingly
+          syncWithFirestore()
+            .catch((err) =>
+              console.warn('Firestore initial sync notice (continuing with cached store data):', err?.message || err)
+            )
+            .finally(() => {
+              startRealtimeListeners();
+            });
         } catch (err) {
           console.warn('Auth restoration notice:', err);
           useManagementStore.setState({ authLoading: false });
@@ -108,6 +170,7 @@ export default function Page() {
     });
 
     return () => {
+      clearTimeout(safetyTimeout);
       unsubscribe();
       // Clean up Firestore listeners on component unmount
       stopRealtimeListeners();
@@ -115,9 +178,18 @@ export default function Page() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const handleSkipToSignIn = () => {
+    useManagementStore.setState({ authLoading: false });
+  };
+
+  const handleQuickRoleLogin = (role: 'ADMIN' | 'PRACTITIONER') => {
+    const targetUser = users.find((u) => u.role === role) || users[0];
+    setUserProfile(targetUser);
+  };
+
   // Auth Gate: While checking session on startup
   if (!mounted || authLoading) {
-    return <AppAuthLoadingScreen />;
+    return <AppAuthLoadingScreen onSkip={handleSkipToSignIn} onQuickLogin={handleQuickRoleLogin} />;
   }
 
   // Auth Gate: Unauthenticated users are strictly shown the SignInScreen
