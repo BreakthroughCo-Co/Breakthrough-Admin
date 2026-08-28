@@ -273,7 +273,7 @@ export const ABCAnalyserModule: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
-                    setActiveTab('bsp');
+                    setActiveTab('bsp-plans');
                     addNotification({
                       title: 'PBS Strategies Staged',
                       message: `Proactive and reactive strategies staged for ${selectedClientObj?.name || 'Participant'} BSP document.`,
@@ -392,7 +392,7 @@ export const ABCAnalyserModule: React.FC = () => {
                           targetDate: goal.targetDate,
                           progressPercent: goal.progressPercent,
                           status: goal.status as any,
-                          gasScore: goal.gasScore
+                          gasScore: goal.gasScore !== undefined ? (goal.gasScore as -2 | -1 | 0 | 1 | 2) : undefined
                         };
                         const updatedGoals = [...(selectedClientObj.goals || []), newGoal];
                         updateClient(selectedClientObj.id, { goals: updatedGoals });

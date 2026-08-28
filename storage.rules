@@ -10,16 +10,20 @@ service firebase.storage {
       return request.auth != null;
     }
 
+    function getUserData() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+
     function getUserRole() {
-      return request.auth.token.role != null ? request.auth.token.role : null;
+      return isSignedIn() && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        ? getUserData().role
+        : null;
     }
 
     function isAdmin() {
       return isSignedIn() && (
         getUserRole() == 'ADMIN' ||
-        getUserRole() == 'admin' ||
-        request.auth.token.role == 'ADMIN' ||
-        request.auth.token.role == 'admin'
+        getUserRole() == 'admin'
       );
     }
 

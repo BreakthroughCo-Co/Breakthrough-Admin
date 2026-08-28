@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { NDISPricingSyncEngine } from '@/lib/ndisPricingService';
 import { OFFICIAL_2026_NDIS_PRICE_GUIDE } from '@/lib/seedData';
+import { requireAuth } from '@/lib/auth/verifySession';
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireAuth(req, ['ADMIN', 'PRACTITIONER']);
+  if ('errorResponse' in authResult) {
+    return authResult.errorResponse;
+  }
+
   try {
     let body: any = {};
     try {

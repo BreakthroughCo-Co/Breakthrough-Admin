@@ -1,8 +1,13 @@
 /**
- * Xero OAuth 2.0 Integration & Bank Feed Payment Reconciliation Service
+ * Mock Xero OAuth 2.0 Integration & Bank Feed Payment Reconciliation Service
  * 
- * Implements 3-legged OAuth 2.0 authorization, token exchange & refresh,
- * live ACCREC sales invoice generation, and bank feed payment reconciliation.
+ * Implements simulated 3-legged OAuth 2.0 authorization, token exchange & refresh,
+ * live ACCREC sales invoice generation, and bank feed payment reconciliation for testing and development.
+ * 
+ * Production Note: To enable live production Xero integration:
+ * 1. Register an OAuth app at https://developer.xero.com
+ * 2. Set XERO_CLIENT_ID, XERO_CLIENT_SECRET, and XERO_REDIRECT_URI in environment variables.
+ * 3. Use the real XeroClient in lib/xeroClient.ts.
  */
 
 import { BillingClaim, XeroInvoice, XeroOAuthState, XeroPayment } from '@/types';
@@ -21,7 +26,7 @@ let currentTokenState: XeroOAuthState = {
 const invoiceStore = new Map<string, XeroInvoice>();
 const bankFeedPayments: XeroPayment[] = [];
 
-export class XeroOAuthService {
+export class MockXeroService {
   /**
    * Generates official Xero 3-legged OAuth 2.0 authorization URL.
    */
@@ -275,3 +280,6 @@ export class XeroOAuthService {
     return [...bankFeedPayments];
   }
 }
+
+export const XeroOAuthService = MockXeroService;
+

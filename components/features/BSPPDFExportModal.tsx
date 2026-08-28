@@ -33,7 +33,7 @@ export const BSPPDFExportModal: React.FC<BSPPDFExportModalProps> = ({
   bsp,
   client
 }) => {
-  const { restrictivePractices, abcLogs, goals, currentUser } = useManagementStore();
+  const { restrictivePractices, abcLogs, clients, currentUser } = useManagementStore();
   const [directorSignoff, setDirectorSignoff] = useState('Dr. Sarah Jenkins, Clinical Director (NDIS #PRAC-9812)');
   const [practitionerSignoff, setPractitionerSignoff] = useState(
     bsp?.authorName || currentUser?.name || 'Registered Behaviour Support Practitioner'
@@ -44,9 +44,10 @@ export const BSPPDFExportModal: React.FC<BSPPDFExportModalProps> = ({
 
   if (!isOpen || !bsp) return null;
 
+  const activeClient = client || clients.find(c => c.id === bsp.clientId);
   const clientRestrictive = restrictivePractices.filter(r => r.clientId === bsp.clientId);
   const clientAbcLogs = abcLogs.filter(a => a.clientId === bsp.clientId).slice(0, 3);
-  const clientGoals = goals.filter(g => g.clientId === bsp.clientId);
+  const clientGoals = activeClient?.goals || [];
 
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
@@ -237,10 +238,10 @@ export const BSPPDFExportModal: React.FC<BSPPDFExportModalProps> = ({
                 </tr>
                 ${clientRestrictive.map(r => `
                   <tr>
-                    <td style="padding: 4px; border: 1px solid #cbd5e1;"><strong>${r.category}</strong></td>
+                    <td style="padding: 4px; border: 1px solid #cbd5e1;"><strong>${r.practiceType || r.type || 'Regulated Practice'}</strong></td>
                     <td style="padding: 4px; border: 1px solid #cbd5e1;">${r.description}</td>
                     <td style="padding: 4px; border: 1px solid #cbd5e1;">${r.status}</td>
-                    <td style="padding: 4px; border: 1px solid #cbd5e1;">${r.authorizationExpiry || '2026-12-31'}</td>
+                    <td style="padding: 4px; border: 1px solid #cbd5e1;">${r.expiryDate || '2026-12-31'}</td>
                   </tr>
                 `).join('')}
               </table>
@@ -403,7 +404,7 @@ export const BSPPDFExportModal: React.FC<BSPPDFExportModalProps> = ({
                       className="p-2 bg-slate-900 rounded border border-slate-800 flex items-center justify-between text-[11px]"
                     >
                       <div>
-                        <span className="font-bold text-rose-300">{r.category}</span> - {r.description}
+                        <span className="font-bold text-rose-300">{r.practiceType || r.type || 'Regulated Practice'}</span> - {r.description}
                       </div>
                       <span className="text-[10px] font-mono text-emerald-400 font-bold">{r.status}</span>
                     </div>

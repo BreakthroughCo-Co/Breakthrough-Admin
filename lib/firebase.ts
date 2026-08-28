@@ -259,7 +259,7 @@ export async function signUpWithEmail(
   email: string,
   password: string,
   displayName: string,
-  role: UserRole = 'PRACTITIONER'
+  role: UserRole = 'PENDING'
 ): Promise<{ user: User; profile: UserProfile }> {
   try {
     const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);

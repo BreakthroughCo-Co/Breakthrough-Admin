@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { NDISProdaApiService } from '@/lib/prodaService';
+import { requireAuth } from '@/lib/auth/verifySession';
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireAuth(req, ['ADMIN', 'PRACTITIONER']);
+  if ('errorResponse' in authResult) {
+    return authResult.errorResponse;
+  }
+
   try {
     const body = await req.json();
     const { claimIds, claims = [], providerRegNumber = '405001234' } = body;

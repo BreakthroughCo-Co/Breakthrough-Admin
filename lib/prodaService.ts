@@ -1,8 +1,13 @@
 /**
- * NDIS PRODA B2G Direct Batch Claim Submission & PACE Status Polling Service
+ * Mock NDIS PRODA B2G Direct Batch Claim Submission & PACE Status Polling Service
  * 
- * Provides programmatic direct submission of approved claims to NDIS PRODA PACE API,
+ * Provides simulated programmatic submission of approved claims to NDIS PRODA PACE API,
  * real-time polling of batch processing statuses, and automated ledger reconciliation.
+ * 
+ * Production Note: To enable live PRODA B2G B2B API integrations:
+ * 1. Provision PRODA Device B2G credentials via PRODA Portal.
+ * 2. Set NDIS_PRODA_CLIENT_ID, NDIS_PRODA_KEYSTORE_PATH, NDIS_PRODA_ORG_ID, and NDIS_PRODA_DEVICE_NAME in environment.
+ * 3. Mount PKI .p12 certificates into the container secure keystore.
  */
 
 import { BillingClaim, ProdaBatchSubmission, ProdaProcessedClaim } from '@/types';
@@ -21,7 +26,7 @@ export const DUMMY_PRODA_CONFIG = {
 const batchStore = new Map<string, ProdaBatchSubmission>();
 let batchCounter = 1000;
 
-export class NDISProdaApiService {
+export class MockProdaService {
   /**
    * Retrieves active dummy PRODA configuration for current practice environment.
    */
@@ -229,3 +234,5 @@ function escapeXml(unsafe: string): string {
     }
   });
 }
+
+export const NDISProdaApiService = MockProdaService;

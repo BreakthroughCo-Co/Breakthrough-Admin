@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'node:crypto';
+import { requireAuth } from '@/lib/auth/verifySession';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireAuth(req, ['ADMIN', 'PRACTITIONER']);
+  if ('errorResponse' in authResult) {
+    return authResult.errorResponse;
+  }
+
   try {
     let body: any = {};
     try {

@@ -288,13 +288,12 @@ export const GoogleClassroomModule: React.FC = () => {
       setNewCourseName('');
       setNewCourseDesc('');
 
-      addAuditLog({
-        id: `audit-${Date.now()}`,
-        action: 'CREATE_TRAINING_COURSE',
-        performedBy: currentUser?.displayName || 'Clinical Supervisor',
-        details: `Created NDIS Staff Training Course: ${newCourseName} (${newCourseSection})`,
-        timestamp: new Date().toISOString()
-      });
+      addAuditLog(
+        'CREATE_TRAINING_COURSE',
+        'GoogleClassroom',
+        createdId,
+        `Created NDIS Staff Training Course: ${newCourseName} (${newCourseSection})`
+      );
 
       setNotification({
         type: 'success',

@@ -5,6 +5,15 @@ import * as d3 from 'd3';
 import { Practitioner, Client } from '@/types';
 import { useManagementStore } from '@/stores/useManagementStore';
 import {
+  evaluateSCHADSShiftCompliance,
+  validateRosterBatchBeforePublish,
+  evaluatePractitionerCredentialGating,
+  SCHADSRosterValidationResult,
+  SCHADSValidationBreach,
+  SCHADSShiftInput
+} from '@/lib/schadsAwardService';
+import { calculateMultiDropTravelClaims } from '@/lib/travelMatrixService';
+import {
   Calendar,
   Clock,
   Users,
@@ -24,7 +33,14 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldAlert,
-  CalendarCheck
+  CalendarCheck,
+  ShieldCheck,
+  DollarSign,
+  Car,
+  Lock,
+  Unlock,
+  Download,
+  Check
 } from 'lucide-react';
 
 export interface ShiftAppointment {
@@ -77,6 +93,9 @@ export const StaffTimelineD3View: React.FC<StaffTimelineD3ViewProps> = ({
   const [highlightConflictsOnly, setHighlightConflictsOnly] = useState(false);
   const [selectedItemDetail, setSelectedItemDetail] = useState<ShiftAppointment | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [showSchadsModal, setShowSchadsModal] = useState(false);
+  const [isPublishingRoster, setIsPublishingRoster] = useState(false);
+  const [rosterPublishedSuccess, setRosterPublishedSuccess] = useState(false);
 
   // Generate realistic Shift Roster and Client Appointments for the timeline
   const [appointments, setAppointments] = useState<ShiftAppointment[]>([
@@ -250,6 +269,55 @@ export const StaffTimelineD3View: React.FC<StaffTimelineD3ViewProps> = ({
       return isPracIncluded;
     });
   }, [appointments, selectedDate, highlightConflictsOnly, filteredPractitioners]);
+
+  // SCHADS Shift Inputs Conversion & Batch Evaluation
+  const schadsShiftInputs: SCHADSShiftInput[] = useMemo(() => {
+    return appointments.map((apt) => ({
+      id: apt.id,
+      practitionerId: apt.practitionerId,
+      clientId: apt.clientId,
+      date: apt.date,
+      startTime: apt.startTime,
+      endTime: apt.endTime,
+      supportTypeCode: apt.supportCode,
+      travelDistanceKm: 12.5,
+      breakDurationMinutes: 0
+    }));
+  }, [appointments]);
+
+  const schadsBatchValidation = useMemo(() => {
+    return validateRosterBatchBeforePublish(schadsShiftInputs, practitioners, clients);
+  }, [schadsShiftInputs, practitioners, clients]);
+
+  const handlePublishRoster = () => {
+    if (!schadsBatchValidation.canPublish) {
+      addNotification({
+        title: 'Roster Publication Blocked',
+        message: `Publication blocked due to ${schadsBatchValidation.blockedShiftsCount} statutory SCHADS Award or Credential Gating breaches.`,
+        type: 'ERROR'
+      });
+      return;
+    }
+
+    setIsPublishingRoster(true);
+    setTimeout(() => {
+      setIsPublishingRoster(false);
+      setRosterPublishedSuccess(true);
+      addAuditLog({
+        userId: currentUser?.uid || 'user-admin',
+        userName: currentUser?.name || 'Practice Director',
+        action: 'SCHADS_ROSTER_PUBLISH',
+        resourceType: 'StaffRoster',
+        resourceId: `ROSTER-${selectedDate}`,
+        details: `Published roster for ${selectedDate} (${schadsShiftInputs.length} shifts, Estimated Payroll: $${schadsBatchValidation.totalEstimatedPayrollGross}) with 100% SCHADS and Screening verification.`
+      });
+      addNotification({
+        title: 'Roster Published Successfully',
+        message: `Roster for ${selectedDate} published with verified SCHADS Award compliance and credential gating.`,
+        type: 'SUCCESS'
+      });
+    }, 900);
+  };
 
   // D3 Rendering Hook
   useEffect(() => {
@@ -740,6 +808,63 @@ export const StaffTimelineD3View: React.FC<StaffTimelineD3ViewProps> = ({
               </button>
             </div>
 
+            {/* SCHADS & Credential Gating Audit Button */}
+            <button
+              type="button"
+              onClick={() => setShowSchadsModal(true)}
+              className={`px-3.5 py-2 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md border transition-all ${
+                schadsBatchValidation.blockedShiftsCount > 0
+                  ? 'bg-amber-950/60 text-amber-300 border-amber-500/50 hover:bg-amber-900/60'
+                  : 'bg-slate-950 text-teal-300 border-teal-500/40 hover:bg-slate-900'
+              }`}
+            >
+              {schadsBatchValidation.blockedShiftsCount > 0 ? (
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+              ) : (
+                <ShieldCheck className="w-3.5 h-3.5 text-teal-400" />
+              )}
+              <span>SCHADS Award &amp; Gating</span>
+              {schadsBatchValidation.blockedShiftsCount > 0 && (
+                <span className="bg-amber-500 text-slate-950 text-[10px] font-bold px-1.5 py-0.2 rounded-full">
+                  {schadsBatchValidation.blockedShiftsCount}
+                </span>
+              )}
+            </button>
+
+            {/* Programmatic Roster Publication Button */}
+            <button
+              type="button"
+              onClick={handlePublishRoster}
+              disabled={!schadsBatchValidation.canPublish || isPublishingRoster}
+              className={`px-3.5 py-2 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md transition-all ${
+                !schadsBatchValidation.canPublish
+                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                  : rosterPublishedSuccess
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-teal-600 hover:bg-teal-500 text-white shadow-teal-950/40'
+              }`}
+              title={
+                !schadsBatchValidation.canPublish
+                  ? 'Roster locked: resolve SCHADS Award or Credential breaches before publishing'
+                  : 'Publish verified roster'
+              }
+            >
+              {!schadsBatchValidation.canPublish ? (
+                <Lock className="w-3.5 h-3.5 text-rose-400" />
+              ) : rosterPublishedSuccess ? (
+                <Check className="w-3.5 h-3.5 text-white" />
+              ) : (
+                <Unlock className="w-3.5 h-3.5 text-white" />
+              )}
+              <span>
+                {isPublishingRoster
+                  ? 'Verifying & Publishing...'
+                  : rosterPublishedSuccess
+                  ? 'Roster Published'
+                  : 'Publish Roster'}
+              </span>
+            </button>
+
             {onOpenScheduler && (
               <button
                 type="button"
@@ -911,6 +1036,217 @@ export const StaffTimelineD3View: React.FC<StaffTimelineD3ViewProps> = ({
               <div className="flex items-center gap-1.5 text-slate-200 font-bold truncate">
                 <MapPin className="w-3.5 h-3.5 text-teal-400 shrink-0" />
                 <span className="truncate">{selectedItemDetail.location}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SCHADS Award & Dynamic Credential Gating Inspection Modal */}
+      {showSchadsModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl shadow-2xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-teal-600 rounded-xl text-white shadow-md">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <span>SCHADS Award &amp; Credential Gating Engine</span>
+                    <span className="text-xs bg-indigo-500/20 text-indigo-300 font-mono px-2 py-0.5 rounded border border-indigo-500/30">
+                      2026 Audit Ready
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Programmatic enforcement of Award minimum shifts, broken shift allowances, rest breaks, and NDIS worker screening.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSchadsModal(false)}
+                className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-5 overflow-y-auto flex-1">
+              {/* Summary KPIs */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+                  <span className="text-slate-500 text-[10px] block uppercase font-mono">Publication Status</span>
+                  <div className="flex items-center gap-1.5 font-bold">
+                    {schadsBatchValidation.canPublish ? (
+                      <span className="text-emerald-400 flex items-center gap-1">
+                        <CheckCircle2 className="w-4 h-4" /> Unlocked
+                      </span>
+                    ) : (
+                      <span className="text-rose-400 flex items-center gap-1">
+                        <Lock className="w-4 h-4" /> Gated / Locked
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+                  <span className="text-slate-500 text-[10px] block uppercase font-mono">Blocking Breaches</span>
+                  <div className="text-lg font-bold font-mono text-amber-400">
+                    {schadsBatchValidation.blockedShiftsCount}
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+                  <span className="text-slate-500 text-[10px] block uppercase font-mono">Allowances / Overtime</span>
+                  <div className="text-lg font-bold font-mono text-teal-400">
+                    {schadsBatchValidation.warningShiftsCount}
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+                  <span className="text-slate-500 text-[10px] block uppercase font-mono">Est. Gross Payroll</span>
+                  <div className="text-lg font-bold font-mono text-slate-100 flex items-center gap-0.5">
+                    <DollarSign className="w-4 h-4 text-teal-400 shrink-0" />
+                    <span>{schadsBatchValidation.totalEstimatedPayrollGross.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Statutory Rules Evaluated */}
+              <div className="p-4 bg-slate-950/80 rounded-xl border border-slate-800 space-y-3">
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 text-teal-400" />
+                  <span>Programmatic Award Clauses Enforced</span>
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-slate-200 block">SCHADS Clause 25.5 (Minimum Engagements)</strong>
+                      <span className="text-slate-400 text-[11px]">2.0 hr minimum for Disability Support, 3.0 hr for Social &amp; Community Services.</span>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-slate-200 block">SCHADS Clause 25.4 (Broken Shift &amp; 12h Span)</strong>
+                      <span className="text-slate-400 text-[11px]">Automatic $20.15 / $39.80 split shift allowance costing + 12h max daily span lock.</span>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-slate-200 block">SCHADS Clause 27 (10-Hour Rest Break)</strong>
+                      <span className="text-slate-400 text-[11px]">Enforces mandatory 10h continuous break between consecutive shifts to prevent fatigue.</span>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-slate-200 block">NDIS Worker Screening Dynamic Gating</strong>
+                      <span className="text-slate-400 text-[11px]">Automatic hard block on unscreened or expired workers from participant rosters.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Detailed Shift Audit Table */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono">
+                  Rostered Shifts Compliance Breakdown ({schadsBatchValidation.shiftResults.length} shifts)
+                </h4>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {schadsBatchValidation.shiftResults.map((res) => {
+                    const hasBlocker = !res.validation.canPublish;
+                    return (
+                      <div
+                        key={res.shiftId}
+                        className={`p-3 rounded-xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                          hasBlocker
+                            ? 'bg-rose-950/20 border-rose-500/40 text-rose-200'
+                            : res.validation.warningCount > 0
+                            ? 'bg-amber-950/20 border-amber-500/30 text-amber-200'
+                            : 'bg-slate-950 border-slate-800 text-slate-300'
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <strong className="text-white font-bold">{res.practitionerName}</strong>
+                            <span className="text-slate-400">→</span>
+                            <span className="text-teal-300 font-semibold">{res.clientName}</span>
+                            <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-mono">
+                              {res.date}
+                            </span>
+                          </div>
+                          {res.validation.breaches.map((b, i) => (
+                            <div key={i} className="text-[11px] flex items-center gap-1.5">
+                              {b.blocksPublication ? (
+                                <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                              ) : (
+                                <Info className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                              )}
+                              <span><strong>{b.title}:</strong> {b.message}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <span className="text-slate-400 text-[10px] block font-mono">Estimated Cost</span>
+                          <span className="text-sm font-bold font-mono text-white">
+                            ${res.validation.costing.totalGrossPayrollCost.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-800 flex items-center justify-between bg-slate-950/50 rounded-b-2xl">
+              <div className="text-xs text-slate-400">
+                {schadsBatchValidation.canPublish ? (
+                  <span className="text-emerald-400 flex items-center gap-1 font-semibold">
+                    <CheckCircle2 className="w-4 h-4" /> Ready for statutory payroll and shift dispatch.
+                  </span>
+                ) : (
+                  <span className="text-rose-400 flex items-center gap-1 font-semibold">
+                    <Lock className="w-4 h-4" /> Resolve blocking breaches to enable publication.
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSchadsModal(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl transition-all"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handlePublishRoster();
+                    setShowSchadsModal(false);
+                  }}
+                  disabled={!schadsBatchValidation.canPublish || isPublishingRoster}
+                  className={`px-4 py-2 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md transition-all ${
+                    !schadsBatchValidation.canPublish
+                      ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                      : 'bg-teal-600 hover:bg-teal-500 text-white'
+                  }`}
+                >
+                  <Unlock className="w-3.5 h-3.5" />
+                  <span>Publish Roster Now</span>
+                </button>
               </div>
             </div>
           </div>

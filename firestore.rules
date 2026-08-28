@@ -49,8 +49,15 @@ service cloud.firestore {
       );
     }
 
+    function isPending() {
+      return isSignedIn() && (
+        getUserRole() == 'PENDING' ||
+        getUserRole() == 'pending'
+      );
+    }
+
     function canWrite() {
-      return isSignedIn() && !isViewer() && !isParticipant();
+      return isSignedIn() && !isViewer() && !isParticipant() && !isPending();
     }
 
     function isAdmin() {
@@ -90,15 +97,15 @@ service cloud.firestore {
     // 2. User Accounts & Google Keep Notes
     // ==========================================
     match /users/{userId} {
-      allow get: if isOwner(userId) || (isSignedIn() && !isParticipant());
-      allow list: if isSignedIn() && !isParticipant();
-      allow create: if (isOwner(userId) && !isParticipant() && !isViewer()) || isAdmin();
-      allow update: if (isOwner(userId) && !isParticipant() && !isViewer() && (!('role' in request.resource.data) || request.resource.data.role == resource.data.role || isAdmin())) || isAdmin();
+      allow get: if isOwner(userId) || (isSignedIn() && !isParticipant() && !isPending());
+      allow list: if isSignedIn() && (isAdmin() || isPractitioner());
+      allow create: if (isOwner(userId) && (request.resource.data.role == 'PENDING' || request.resource.data.role == 'PARTICIPANT')) || isAdmin();
+      allow update: if (isOwner(userId) && (!('role' in request.resource.data) || request.resource.data.role == resource.data.role)) || isAdmin();
       allow delete: if isAdmin();
 
       // Google Keep user-owned notes and checklists
       match /keepNotes/{noteId} {
-        allow read: if (isOwner(userId) && !isParticipant()) || isAdmin();
+        allow read: if (isOwner(userId) && !isParticipant() && !isPending()) || isAdmin();
         allow write: if (isOwner(userId) && canWrite()) || isAdmin();
       }
     }
@@ -233,8 +240,8 @@ service cloud.firestore {
     // 14. Audit Trail Ledger (Append-Only)
     // ==========================================
     match /auditLogs/{logId} {
-      allow read: if isSignedIn() && !isParticipant();
-      allow create: if isSignedIn() && !isParticipant();
+      allow read: if isSignedIn() && !isParticipant() && !isPending();
+      allow create: if isSignedIn() && !isParticipant() && !isPending();
       allow update, delete: if false; // Strict immutability
     }
 
@@ -243,7 +250,7 @@ service cloud.firestore {
     // ==========================================
     match /scheduledShifts/{shiftId} {
       // Non-participants can read all shifts; PARTICIPANT can read their own scheduled appointments
-      allow read: if (isSignedIn() && !isParticipant()) || (
+      allow read: if (isSignedIn() && !isParticipant() && !isPending()) || (
         isParticipant() && (
           resource != null && (
             resource.data.clientId == request.auth.uid ||
@@ -262,7 +269,21 @@ service cloud.firestore {
     // Real-time Notifications & Alerts
     // ==========================================
     match /notifications/{notificationId} {
-      allow read, write: if isSignedIn();
+      allow read: if isSignedIn() && (
+        resource == null ||
+        resource.data.userId == request.auth.uid ||
+        resource.data.recipientId == request.auth.uid ||
+        resource.data.recipientEmail == request.auth.token.email ||
+        isAdmin() ||
+        (canWrite() && resource.data.channel != 'PARTICIPANT_PRIVATE')
+      );
+      allow create: if isSignedIn() && (canWrite() || isAdmin());
+      allow update: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.recipientId == request.auth.uid ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
     }
 
     // ==========================================

@@ -129,6 +129,7 @@ export interface ComplianceSlice {
   addBSPPlan: (bsp: BSPDocument | Omit<BSPDocument, 'id' | 'lastUpdated'>) => void;
   addBSPDocument: (bsp: BSPDocument | Omit<BSPDocument, 'id' | 'lastUpdated'>) => void;
   updateBspDocument: (id: string, updates: Partial<BSPDocument>) => void;
+  updateBSPDocument: (id: string, updates: Partial<BSPDocument>) => void;
   deleteBSPDocument: (id: string) => void;
 }
 

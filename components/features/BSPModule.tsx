@@ -36,7 +36,7 @@ export const BSPModule: React.FC = () => {
     caseNotes,
     currentUser,
     addBSPDocument,
-    updateBSPDocument,
+    updateBspDocument,
     addAuditLog,
     addNotification,
     setActiveTab
@@ -118,7 +118,7 @@ export const BSPModule: React.FC = () => {
       message: `12-month statutory review countdown initialized. Review due in 12 months.`,
       type: 'clinical',
       severity: 'success',
-      linkTab: 'bsp'
+      linkTab: 'bsp-plans'
     });
 
     setSummary('');
@@ -141,7 +141,7 @@ export const BSPModule: React.FC = () => {
         'Transitioned via 12-Month BSP Review Engine'
       );
 
-      updateBSPDocument(doc.id, {
+      updateBspDocument(doc.id, {
         status: targetStatus as any,
         reviewDate: result.newReviewDate || doc.reviewDate,
         lastUpdated: new Date().toISOString()
@@ -159,7 +159,7 @@ export const BSPModule: React.FC = () => {
         message: `Plan status updated to "${targetStatus}".`,
         type: 'clinical',
         severity: targetStatus === 'Re-Authorized' ? 'success' : 'info',
-        linkTab: 'bsp'
+        linkTab: 'bsp-plans'
       });
     } catch (err: any) {
       setWorkflowError(err.message);

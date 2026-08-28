@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 export default function ParticipantPortalPage() {
-  const { currentUser, setCurrentUser, users, clients } = useManagementStore();
+  const { currentUser, setUserProfile, users, clients } = useManagementStore();
   const [inviteCode, setInviteCode] = useState('');
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +48,7 @@ export default function ParticipantPortalPage() {
         lastLogin: new Date().toISOString()
       };
 
-      setCurrentUser(participantUser);
+      setUserProfile(participantUser);
     } else {
       setError('Invalid invite code or participant email. Please check your invitation email from Breakthrough Coaching & Consulting.');
     }
@@ -61,7 +61,7 @@ export default function ParticipantPortalPage() {
       ndisNumber: '430891245'
     };
 
-    setCurrentUser({
+    setUserProfile({
       id: targetClient.id,
       uid: targetClient.id,
       name: targetClient.name,
@@ -183,7 +183,7 @@ export default function ParticipantPortalPage() {
             <div className="text-[10px] text-slate-400 font-mono">Role: {currentUser?.role}</div>
           </div>
           <button
-            onClick={() => setCurrentUser(null)}
+            onClick={() => setUserProfile(null)}
             className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-rose-400 rounded-xl border border-slate-800 transition-colors flex items-center gap-1 text-xs"
             title="Sign Out"
           >

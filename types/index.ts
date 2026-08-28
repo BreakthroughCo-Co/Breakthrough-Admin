@@ -1,4 +1,4 @@
-export type UserRole = 'ADMIN' | 'PRACTITIONER' | 'VIEWER' | 'SUPPORT_COORDINATOR' | 'PARTICIPANT';
+export type UserRole = 'ADMIN' | 'PRACTITIONER' | 'VIEWER' | 'SUPPORT_COORDINATOR' | 'PARTICIPANT' | 'PENDING';
 
 export interface UserProfile {
   id: string;
@@ -13,6 +13,7 @@ export interface UserProfile {
   practitionerId?: string;
   participantId?: string;
   linkedClientId?: string;
+  ndisNumber?: string;
   isInviteOnly?: boolean;
   workerScreeningStatus?: 'Active' | 'Pending' | 'Expiring Soon' | 'Expired';
   workerScreeningExpiry?: string;
@@ -106,6 +107,8 @@ export interface Client {
   agreedHourlyRate?: number;
   weeklyAllocatedHours?: number;
   restrictivePracticesActive: boolean;
+  bspExpiryDate?: string;
+  bspStatus?: string;
   isCustomUserParticipant?: boolean;
   documents?: AttachedDocument[];
   attachedDocuments?: AttachedDocument[];
@@ -117,6 +120,7 @@ export interface CaseNote {
   id: string;
   clientId: string;
   clientName: string;
+  ndisNumber?: string;
   practitionerId: string;
   practitionerName: string;
   date: string;
@@ -164,7 +168,9 @@ export interface RestrictivePractice {
   description: string;
   status: 'Proposed' | 'Authorized' | 'Active' | 'Superseded' | 'Expired';
   authorizationBody: string; // e.g. "VIC Senior Practitioner"
+  authorizingBody?: string;
   authorizationReference: string;
+  authorizationExpiry?: string;
   authorisationStatus?: string;
   authorisedBy?: string;
   clinicalRationale?: string;
@@ -175,6 +181,8 @@ export interface RestrictivePractice {
   reductionPlanSummary: string;
   monthlyReportStatus: 'Submitted' | 'Due' | 'Overdue';
   lastReportedDate?: string;
+  monthlyUsageCount?: number;
+  clinicalSupervisorId?: string;
 }
 
 export interface Incident {
@@ -283,7 +291,17 @@ export interface BSPDocument {
   clientId: string;
   clientName: string;
   version: string; // e.g. "v1.2"
-  status: 'Draft' | 'Panel Review' | 'Submitted to NDIS' | 'Active' | 'Superseded';
+  status:
+    | 'Draft'
+    | 'Panel Review'
+    | 'Submitted to NDIS'
+    | 'Active'
+    | 'Superseded'
+    | 'Under Review'
+    | 'Panel Submitted'
+    | 'Re-Authorized'
+    | 'Current'
+    | 'Due in 30 Days';
   summary: string;
   primaryBehaviorsOfConcern: string[];
   proactiveStrategies: string[];

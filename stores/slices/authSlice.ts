@@ -50,10 +50,8 @@ export const createAuthSlice: StateCreator<RootStore, [], [], AuthSlice> = (set,
     try {
       let profile = await getUserProfile(firebaseUser.uid);
       if (!profile) {
-        // Auto-bootstrap profile on first sign-in
-        const isDirectorOrAdmin =
-          (firebaseUser.email && (firebaseUser.email.includes('admin') || firebaseUser.email.includes('director'))) ?? false;
-        const role: UserRole = isDirectorOrAdmin ? 'ADMIN' : 'PRACTITIONER';
+        // Default newly registered users strictly to PENDING until approved by Administrator
+        const role: UserRole = 'PENDING';
 
         profile = {
           id: firebaseUser.uid,
@@ -64,12 +62,12 @@ export const createAuthSlice: StateCreator<RootStore, [], [], AuthSlice> = (set,
           role: role,
           photoURL: firebaseUser.photoURL || undefined,
           avatarUrl: firebaseUser.photoURL || undefined,
-          position: isDirectorOrAdmin ? 'Clinical Director' : 'Behaviour Support Practitioner',
+          position: 'Pending Verification',
           practitionerId: `prac-${firebaseUser.uid.slice(-4)}`,
-          workerScreeningStatus: 'Active',
+          workerScreeningStatus: 'Pending',
           workerScreeningExpiry: '2028-12-31',
           policeCheckExpiry: '2027-12-31',
-          ndisOrientationDone: true,
+          ndisOrientationDone: false,
           activeCaseload: 0,
           lastLogin: new Date().toISOString(),
           createdAt: new Date().toISOString(),
@@ -88,12 +86,12 @@ export const createAuthSlice: StateCreator<RootStore, [], [], AuthSlice> = (set,
         uid: firebaseUser.uid,
         name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'NDIS Specialist',
         email: firebaseUser.email || '',
-        role: 'PRACTITIONER',
-        position: 'Behaviour Support Practitioner',
-        workerScreeningStatus: 'Active',
+        role: 'PENDING',
+        position: 'Pending Verification',
+        workerScreeningStatus: 'Pending',
         workerScreeningExpiry: '2028-12-31',
         policeCheckExpiry: '2027-12-31',
-        ndisOrientationDone: true,
+        ndisOrientationDone: false,
         activeCaseload: 0
       };
       set({ currentUser: fallback, isAuthenticated: true, authLoading: false });

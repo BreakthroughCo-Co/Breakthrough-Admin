@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { XeroOAuthService } from '@/lib/xeroService';
+import { requireAuth } from '@/lib/auth/verifySession';
+import { BillingClaim } from '@/types';
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireAuth(req, ['ADMIN', 'PRACTITIONER']);
+  if ('errorResponse' in authResult) {
+    return authResult.errorResponse;
+  }
+
   try {
     const body = await req.json();
     const { claims = [], payments = [], tenantId } = body;
+    const typedClaims: BillingClaim[] = claims;
 
     // Record any incoming payment events
     for (const p of payments) {
@@ -15,7 +23,7 @@ export async function POST(req: NextRequest) {
 
     // Reconcile with claims
     const storeProxy = {
-      billingClaims: claims
+      billingClaims: typedClaims
     };
 
     const syncedCount = XeroOAuthService.syncBankFeedPayments(tenantId, storeProxy);
@@ -23,10 +31,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       reconciledPayments: syncedCount,
-      reconciledClaims: storeProxy.billingClaims.filter((c) => c.status === 'Paid'),
+      reconciledClaims: storeProxy.billingClaims.filter((c: BillingClaim) => c.status === 'Paid'),
       totalPushedValue: storeProxy.billingClaims
-        .filter((c) => c.status === 'Paid')
-        .reduce((sum, c) => sum + (c.totalAmount || 0), 0),
+        .filter((c: BillingClaim) => c.status === 'Paid')
+        .reduce((sum: number, c: BillingClaim) => sum + (c.totalAmount || 0), 0),
       lastSyncAt: new Date().toISOString()
     });
   } catch (err: any) {

@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { NDISProdaApiService } from '@/lib/prodaService';
+import { requireAuth } from '@/lib/auth/verifySession';
 
 export async function GET(req: NextRequest) {
+  const authResult = await requireAuth(req, ['ADMIN', 'PRACTITIONER', 'SUPPORT_COORDINATOR']);
+  if ('errorResponse' in authResult) {
+    return authResult.errorResponse;
+  }
+
   try {
     const { searchParams } = new URL(req.url);
     const batchId = searchParams.get('batchId');
@@ -27,6 +33,11 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireAuth(req, ['ADMIN', 'PRACTITIONER', 'SUPPORT_COORDINATOR']);
+  if ('errorResponse' in authResult) {
+    return authResult.errorResponse;
+  }
+
   try {
     const body = await req.json();
     const { batchId } = body;

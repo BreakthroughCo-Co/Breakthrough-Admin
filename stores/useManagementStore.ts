@@ -170,7 +170,8 @@ export type TabType =
   | 'hr-roster'
   | 'audit-logs'
   | 'security-audit'
-  | 'integrations';
+  | 'integrations'
+  | 'participant-portal';
 
 export const OFFICIAL_2026_NDIS_PRICE_GUIDE: NDISSupportItem[] = [
   {
@@ -1252,6 +1253,7 @@ interface ManagementState {
   addBSPPlan: (bsp: BSPDocument | Omit<BSPDocument, 'id' | 'lastUpdated'>) => void;
   addBSPDocument: (bsp: BSPDocument | Omit<BSPDocument, 'id' | 'lastUpdated'>) => void;
   updateBspDocument: (id: string, updates: Partial<BSPDocument>) => void;
+  updateBSPDocument: (id: string, updates: Partial<BSPDocument>) => void;
   deleteBSPDocument: (id: string) => void;
 
   addBillingClaim: (claim: BillingClaim | Omit<BillingClaim, 'id' | 'invoiceNumber'>) => void;
@@ -1352,9 +1354,8 @@ export const useManagementStore = create<ManagementState>((set, get) => ({
       set({ isAuthenticated: false, authLoading: false });
       return null;
     }
-    const isDirectorOrAdmin =
-      (firebaseUser.email && (firebaseUser.email.includes('admin') || firebaseUser.email.includes('director'))) ?? false;
-    const role: UserRole = isDirectorOrAdmin ? 'ADMIN' : 'PRACTITIONER';
+    // Default newly registered users strictly to PENDING until approved by Administrator
+    const role: UserRole = 'PENDING';
 
     const defaultProfile: UserProfile = {
       id: firebaseUser.uid,
@@ -1365,12 +1366,12 @@ export const useManagementStore = create<ManagementState>((set, get) => ({
       role: role,
       photoURL: firebaseUser.photoURL || undefined,
       avatarUrl: firebaseUser.photoURL || undefined,
-      position: isDirectorOrAdmin ? 'Clinical Director' : 'Senior Behaviour Support Practitioner',
+      position: 'Pending Verification',
       practitionerId: `prac-${firebaseUser.uid.slice(-4)}`,
-      workerScreeningStatus: 'Active',
+      workerScreeningStatus: 'Pending',
       workerScreeningExpiry: '2028-12-31',
       policeCheckExpiry: '2027-12-31',
-      ndisOrientationDone: true,
+      ndisOrientationDone: false,
       activeCaseload: 0,
       lastLogin: new Date().toISOString(),
       createdAt: new Date().toISOString(),
@@ -2268,6 +2269,10 @@ export const useManagementStore = create<ManagementState>((set, get) => ({
       console.warn('Firestore write failed for updateBspDocument, queueing offline:', err);
       get().queueOfflineDelta('UPDATE', 'BSPDocument', id, updates);
     });
+  },
+
+  updateBSPDocument: (id, updates) => {
+    get().updateBspDocument(id, updates);
   },
 
   deleteBSPDocument: (id) => {

@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { XeroOAuthService } from '@/lib/xeroService';
+import { requireAuth } from '@/lib/auth/verifySession';
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireAuth(req, ['ADMIN', 'PRACTITIONER']);
+  if ('errorResponse' in authResult) {
+    return authResult.errorResponse;
+  }
+
   try {
     const body = await req.json();
     const { claim, tenantId, claimId } = body;
@@ -32,6 +38,11 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const authResult = await requireAuth(req, ['ADMIN', 'PRACTITIONER', 'SUPPORT_COORDINATOR']);
+  if ('errorResponse' in authResult) {
+    return authResult.errorResponse;
+  }
+
   try {
     const invoices = XeroOAuthService.getInvoices();
     return NextResponse.json({

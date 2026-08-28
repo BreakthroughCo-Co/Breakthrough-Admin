@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { XeroOAuthService } from '@/lib/xeroService';
+import { requireAuth } from '@/lib/auth/verifySession';
+import { BillingClaim } from '@/types';
 
 export async function GET(req: NextRequest) {
+  const authResult = await requireAuth(req, ['ADMIN', 'PRACTITIONER', 'SUPPORT_COORDINATOR']);
+  if ('errorResponse' in authResult) {
+    return authResult.errorResponse;
+  }
+
   try {
     const tokenState = XeroOAuthService.getTokenState();
     return NextResponse.json({
@@ -17,9 +24,15 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireAuth(req, ['ADMIN', 'PRACTITIONER']);
+  if ('errorResponse' in authResult) {
+    return authResult.errorResponse;
+  }
+
   try {
     const body = await req.json();
     const { action = 'sync_payments', payments = [], claims = [], tenantId } = body;
+    const typedClaims: BillingClaim[] = claims;
 
     if (action === 'refresh_token') {
       const refreshed = XeroOAuthService.refreshToken();
@@ -48,7 +61,7 @@ export async function POST(req: NextRequest) {
 
     // Sync bank feed payments to claims
     const storeProxy = {
-      billingClaims: claims
+      billingClaims: typedClaims
     };
 
     const syncedCount = XeroOAuthService.syncBankFeedPayments(tenantId, storeProxy);
@@ -57,7 +70,7 @@ export async function POST(req: NextRequest) {
       success: true,
       action: 'sync_payments',
       syncedCount,
-      reconciledClaims: storeProxy.billingClaims.filter((c) => c.status === 'Paid'),
+      reconciledClaims: storeProxy.billingClaims.filter((c: BillingClaim) => c.status === 'Paid'),
       lastSyncAt: new Date().toISOString()
     });
   } catch (err: any) {

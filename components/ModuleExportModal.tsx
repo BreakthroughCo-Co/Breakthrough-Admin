@@ -41,7 +41,10 @@ const MODULE_TITLES: Record<TabType, string> = {
   'billing': 'PACE & Proda Invoicing, Price Guide Claims & Reconciliation',
   'hr-roster': 'Practitioner Worker Screening (NWSC) & Roster Register',
   'audit-logs': 'Immutable NDIS Clinical Audit Trails & Event Ledger',
-  'integrations': 'Cloud Integrations & Synchronization Health'
+  'security-audit': 'Enterprise Security Audit & Privilege Matrix',
+  'integrations': 'Cloud Integrations & Synchronization Health',
+  'google-classroom': 'Workforce Training & Competency Modules',
+  'participant-portal': 'NDIS Participant Portal & Care Plan Summary'
 };
 
 export const ModuleExportModal: React.FC<ModuleExportModalProps> = ({

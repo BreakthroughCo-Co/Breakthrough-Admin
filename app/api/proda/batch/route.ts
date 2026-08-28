@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { NDISProdaApiService } from '@/lib/prodaService';
 import { BillingClaim } from '@/types';
+import { requireAuth } from '@/lib/auth/verifySession';
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireAuth(req, ['ADMIN', 'PRACTITIONER']);
+  if ('errorResponse' in authResult) {
+    return authResult.errorResponse;
+  }
+
   try {
     const body = await req.json();
     const { claimIds, claims, providerRegNumber } = body;
@@ -39,6 +45,11 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const authResult = await requireAuth(req, ['ADMIN', 'PRACTITIONER', 'SUPPORT_COORDINATOR']);
+  if ('errorResponse' in authResult) {
+    return authResult.errorResponse;
+  }
+
   try {
     const { searchParams } = new URL(req.url);
     const batchId = searchParams.get('batchId');

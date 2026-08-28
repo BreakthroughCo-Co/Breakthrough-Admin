@@ -3,12 +3,12 @@ const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
-  serverExternalPackages: ['@google/genai', 'xero-node', 'express'],
+  serverExternalPackages: ['@google/genai', 'xero-node'],
 };
 
 export default nextConfig;

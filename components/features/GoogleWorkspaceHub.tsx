@@ -1096,6 +1096,7 @@ export function GoogleWorkspaceHub() {
                 status: 'In Progress'
               }
             ],
+            restrictivePracticesActive: false,
             planStartDate: '2026-01-01',
             planEndDate: '2026-12-31'
           });
