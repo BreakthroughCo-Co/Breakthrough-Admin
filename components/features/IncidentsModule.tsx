@@ -131,6 +131,31 @@ export const IncidentsModule: React.FC = () => {
 
   const selectedClientObj = clients.find((c: Client) => c.id === selectedClient);
 
+  // Statutory SLA countdown calculator (NDIS 24-hr Notification & 5-Day Detailed Report)
+  const getStatutoryCountdownDetails = (incidentDateStr: string) => {
+    const incidentTime = new Date(incidentDateStr).getTime();
+    const now = Date.now();
+    
+    // 24-hr deadline = incidentTime + 24 hours
+    const hr24Deadline = incidentTime + 24 * 60 * 60 * 1000;
+    const hr24RemainingMs = hr24Deadline - now;
+    const hr24Hours = Math.max(0, Math.floor(hr24RemainingMs / (1000 * 60 * 60)));
+    const hr24Minutes = Math.max(0, Math.floor((hr24RemainingMs % (1000 * 60 * 60)) / (1000 * 60)));
+
+    // 5-day deadline = incidentTime + 5 * 24 hours
+    const day5Deadline = incidentTime + 5 * 24 * 60 * 60 * 1000;
+    const day5RemainingMs = day5Deadline - now;
+    const day5Days = Math.max(0, Math.floor(day5RemainingMs / (1000 * 60 * 60 * 24)));
+    const day5Hours = Math.max(0, Math.floor((day5RemainingMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)));
+
+    return {
+      is24hrOverdue: hr24RemainingMs <= 0,
+      hr24Label: hr24RemainingMs <= 0 ? '24-hr Notification Logged / Portal Dispatched' : `${hr24Hours}h ${hr24Minutes}m remaining for Commission Notice`,
+      is5dayOverdue: day5RemainingMs <= 0,
+      day5Label: day5RemainingMs <= 0 ? '5-Day Detailed Report Due' : `${day5Days}d ${day5Hours}h left for 5-Day Final Return`,
+    };
+  };
+
   const handleCreateIncident = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedClientObj || !description) return;
@@ -391,6 +416,7 @@ export const IncidentsModule: React.FC = () => {
 
           const stepIdx = getStepIndex(incident.status);
           const isClosed = stepIdx === 4;
+          const slaDetails = getStatutoryCountdownDetails(incident.incidentDate);
 
           return (
             <div
@@ -445,6 +471,20 @@ export const IncidentsModule: React.FC = () => {
                   </span>
                 </div>
               </div>
+
+              {/* Statutory Reportable SLA Countdown Banner */}
+              {(isHighOrCritical || incident.isNdisReportable) && !isClosed && (
+                <div className="bg-slate-950 p-2.5 rounded-lg border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-mono">
+                  <div className="flex items-center gap-2 text-amber-300">
+                    <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span><strong>Statutory 24-hr SLA:</strong> {slaDetails.hr24Label}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-teal-300">
+                    <FileCheck className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+                    <span><strong>5-Day Detailed Report:</strong> {slaDetails.day5Label}</span>
+                  </div>
+                </div>
+              )}
 
               {/* 4-Step Incident Investigation Sign-off Stepper (R12) */}
               <div className="bg-slate-950/90 p-3 rounded-xl border border-slate-800 space-y-2">

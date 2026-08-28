@@ -5,6 +5,7 @@ import { useManagementStore } from '@/stores/useManagementStore';
 import { Practitioner, Client } from '@/types';
 import { StaffAvailabilityHeatmap } from './StaffAvailabilityHeatmap';
 import { StaffingGapAutoScheduler, ScheduledShift } from './StaffingGapAutoScheduler';
+import { StaffTimelineD3View, ShiftAppointment } from './StaffTimelineD3View';
 import {
   UserCheck,
   ShieldCheck,
@@ -22,12 +23,18 @@ import {
   Check,
   Star,
   TrendingUp,
-  Zap
+  Zap,
+  Clock,
+  Calendar,
+  Grid
 } from 'lucide-react';
 
 export const HRModule: React.FC = () => {
   const { currentUser, practitioners, clients, addNotification, addAuditLog } = useManagementStore();
   const isViewer = currentUser?.role === 'VIEWER';
+  
+  // HR Module Sub-View Switcher
+  const [activeHRView, setActiveHRView] = useState<'D3_TIMELINE' | 'HEATMAP' | 'AUTO_SCHEDULER' | 'PREFLIGHT_CONFLICT' | 'STAFF_PROFILES'>('D3_TIMELINE');
   const [selectedClientForRostering, setSelectedClientForRostering] = useState(clients[0]?.id || 'cli-101');
   const [isSendingReminders, setIsSendingReminders] = useState(false);
   const [reminderSentStatus, setReminderSentStatus] = useState<string | null>(null);
@@ -366,31 +373,123 @@ export const HRModule: React.FC = () => {
         </div>
       )}
 
-      {/* Staff Availability Heatmap & Roster Gap Intelligence */}
-      <StaffAvailabilityHeatmap
-        onSelectSlotForScheduling={(dayDate, startT, endT, pracId) => {
-          setShiftDate(dayDate);
-          setShiftStartTime(startT);
-          setShiftEndTime(endT);
-          if (pracId) {
-            setShiftPractitionerId(pracId);
-          }
-        }}
-      />
+      {/* HR Module Sub-Navigation Toolbar */}
+      <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => setActiveHRView('D3_TIMELINE')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border whitespace-nowrap ${
+            activeHRView === 'D3_TIMELINE'
+              ? 'bg-teal-500/10 text-teal-300 border-teal-500/30 shadow-sm'
+              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+          }`}
+        >
+          <Calendar className="w-4 h-4 text-teal-400" />
+          <span>D3.js Shift View Timeline</span>
+          <span className="text-[10px] bg-teal-500/20 text-teal-300 px-1.5 py-0.2 rounded font-mono font-bold">
+            Live
+          </span>
+        </button>
 
-      {/* Auto-Scheduling & Client Support Gap Intelligence Helper */}
-      <StaffingGapAutoScheduler
-        scheduledShifts={scheduledShifts}
-        onAddSuggestedShift={(newShift) => {
-          setScheduledShifts((prev) => [newShift, ...prev]);
-        }}
-        onAddBulkShifts={(newShifts) => {
-          setScheduledShifts((prev) => [...newShifts, ...prev]);
-        }}
-      />
+        <button
+          type="button"
+          onClick={() => setActiveHRView('HEATMAP')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border whitespace-nowrap ${
+            activeHRView === 'HEATMAP'
+              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 shadow-sm'
+              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+          }`}
+        >
+          <Grid className="w-4 h-4 text-emerald-400" />
+          <span>Staff Availability Heatmap</span>
+        </button>
 
-      {/* Pre-Flight Shift Scheduling & Conflict Checker Engine */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-sm">
+        <button
+          type="button"
+          onClick={() => setActiveHRView('AUTO_SCHEDULER')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border whitespace-nowrap ${
+            activeHRView === 'AUTO_SCHEDULER'
+              ? 'bg-purple-500/10 text-purple-300 border-purple-500/30 shadow-sm'
+              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+          }`}
+        >
+          <Sparkles className="w-4 h-4 text-purple-400" />
+          <span>Roster Gap Auto-Scheduler</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveHRView('PREFLIGHT_CONFLICT')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border whitespace-nowrap ${
+            activeHRView === 'PREFLIGHT_CONFLICT'
+              ? 'bg-amber-500/10 text-amber-300 border-amber-500/30 shadow-sm'
+              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+          }`}
+        >
+          <CalendarCheck className="w-4 h-4 text-amber-400" />
+          <span>Pre-Flight Conflict Checker</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveHRView('STAFF_PROFILES')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border whitespace-nowrap ${
+            activeHRView === 'STAFF_PROFILES'
+              ? 'bg-sky-500/10 text-sky-300 border-sky-500/30 shadow-sm'
+              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+          }`}
+        >
+          <Users className="w-4 h-4 text-sky-400" />
+          <span>Staff Credentials ({practitioners.length})</span>
+        </button>
+      </div>
+
+      {/* VIEW 1: D3.js High-Density Timeline (Primary 'Shift View' Calendar Interface) */}
+      {activeHRView === 'D3_TIMELINE' && (
+        <StaffTimelineD3View
+          onOpenScheduler={() => setActiveHRView('AUTO_SCHEDULER')}
+          onSelectShift={(apt) => {
+            setShiftPractitionerId(apt.practitionerId);
+            setShiftClientId(apt.clientId);
+            setShiftDate(apt.date);
+            setShiftStartTime(apt.startTime);
+            setShiftEndTime(apt.endTime);
+          }}
+        />
+      )}
+
+      {/* VIEW 2: Staff Availability Heatmap */}
+      {activeHRView === 'HEATMAP' && (
+        <StaffAvailabilityHeatmap
+          onSelectSlotForScheduling={(dayDate, startT, endT, pracId) => {
+            setShiftDate(dayDate);
+            setShiftStartTime(startT);
+            setShiftEndTime(endT);
+            if (pracId) {
+              setShiftPractitionerId(pracId);
+            }
+            setActiveHRView('PREFLIGHT_CONFLICT');
+          }}
+        />
+      )}
+
+      {/* VIEW 3: Auto-Scheduling & Client Support Gap Intelligence Helper */}
+      {activeHRView === 'AUTO_SCHEDULER' && (
+        <StaffingGapAutoScheduler
+          scheduledShifts={scheduledShifts}
+          onAddSuggestedShift={(newShift) => {
+            setScheduledShifts((prev) => [newShift, ...prev]);
+          }}
+          onAddBulkShifts={(newShifts) => {
+            setScheduledShifts((prev) => [...newShifts, ...prev]);
+          }}
+        />
+      )}
+
+      {/* VIEW 4: Pre-Flight Conflict Checker & Shift Creator */}
+      {activeHRView === 'PREFLIGHT_CONFLICT' && (
+        <div className="space-y-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
           <div>
             <div className="flex items-center gap-2">
@@ -763,56 +862,60 @@ export const HRModule: React.FC = () => {
             </div>
           </div>
         )}
+        </div>
       </div>
+    )}
 
-      {/* Practitioner Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {practitioners.map((prac: Practitioner) => (
-          <div key={prac.id} className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-sm">
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="text-[10px] bg-teal-500/10 text-teal-400 font-mono px-2 py-0.5 rounded font-bold border border-teal-500/20">
-                  {prac.ndisRegistrationNumber}
+      {/* VIEW 5: Practitioner Cards & Compliance Grid */}
+      {activeHRView === 'STAFF_PROFILES' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {practitioners.map((prac: Practitioner) => (
+            <div key={prac.id} className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-sm">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-[10px] bg-teal-500/10 text-teal-400 font-mono px-2 py-0.5 rounded font-bold border border-teal-500/20">
+                    {prac.ndisRegistrationNumber}
+                  </span>
+                  <h3 className="text-base font-bold text-white mt-1">{prac.name}</h3>
+                  <p className="text-xs text-slate-400">{prac.position}</p>
+                  <span className="inline-block text-[10px] bg-slate-950 text-teal-300 font-mono px-2 py-0.5 rounded border border-slate-800 font-bold mt-1">
+                    {prac.pbsRegistrationLevel || 'Proficient Practitioner'}
+                  </span>
+                </div>
+
+                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                  {prac.screeningStatus}
                 </span>
-                <h3 className="text-base font-bold text-white mt-1">{prac.name}</h3>
-                <p className="text-xs text-slate-400">{prac.position}</p>
-                <span className="inline-block text-[10px] bg-slate-950 text-teal-300 font-mono px-2 py-0.5 rounded border border-slate-800 font-bold mt-1">
-                  {prac.pbsRegistrationLevel || 'Proficient Practitioner'}
+              </div>
+
+              <p className="text-xs text-slate-300 font-mono bg-slate-950 p-2.5 rounded-lg border border-slate-800/80">
+                Qualifications: {prac.qualification}
+              </p>
+
+              <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                <div className="p-2.5 bg-slate-950 rounded-lg border border-slate-800/50">
+                  <span className="text-slate-500 text-[9px] uppercase block">NWSC Screening</span>
+                  <span className="text-emerald-400 font-bold">Expires: {prac.screeningExpiryDate}</span>
+                </div>
+                <div className="p-2.5 bg-slate-950 rounded-lg border border-slate-800/50">
+                  <span className="text-slate-500 text-[9px] uppercase block">Police Check</span>
+                  <span className="text-teal-400 font-bold">Expires: {prac.policeCheckExpiryDate}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-800">
+                <span className="text-slate-400">
+                  Active Caseload: <span className="text-white font-bold">{prac.activeCaseloadCount}</span> / {prac.caseloadLimit}
+                </span>
+                <span className="text-emerald-400 font-bold flex items-center gap-1">
+                  <Award className="w-3.5 h-3.5" />
+                  CPD: {prac.cpdHoursThisYear} hrs
                 </span>
               </div>
-
-              <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
-                {prac.screeningStatus}
-              </span>
             </div>
-
-            <p className="text-xs text-slate-300 font-mono bg-slate-950 p-2.5 rounded-lg border border-slate-800/80">
-              Qualifications: {prac.qualification}
-            </p>
-
-            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-              <div className="p-2.5 bg-slate-950 rounded-lg border border-slate-800/50">
-                <span className="text-slate-500 text-[9px] uppercase block">NWSC Screening</span>
-                <span className="text-emerald-400 font-bold">Expires: {prac.screeningExpiryDate}</span>
-              </div>
-              <div className="p-2.5 bg-slate-950 rounded-lg border border-slate-800/50">
-                <span className="text-slate-500 text-[9px] uppercase block">Police Check</span>
-                <span className="text-teal-400 font-bold">Expires: {prac.policeCheckExpiryDate}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-800">
-              <span className="text-slate-400">
-                Active Caseload: <span className="text-white font-bold">{prac.activeCaseloadCount}</span> / {prac.caseloadLimit}
-              </span>
-              <span className="text-emerald-400 font-bold flex items-center gap-1">
-                <Award className="w-3.5 h-3.5" />
-                CPD: {prac.cpdHoursThisYear} hrs
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

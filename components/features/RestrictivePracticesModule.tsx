@@ -76,8 +76,8 @@ export const RestrictivePracticesModule: React.FC = () => {
     setRefNum('');
   };
 
-  const handleExportCommissionReport = (format: 'JSON' | 'CSV' | 'PRINT') => {
-    const { report, csvExport, jsonExport, printableHtml } = generateRestrictivePracticesCommissionReport(
+  const handleExportCommissionReport = (format: 'JSON' | 'CSV' | 'XML' | 'PRINT') => {
+    const { report, csvExport, xmlExport, jsonExport, printableHtml } = generateRestrictivePracticesCommissionReport(
       restrictivePractices,
       reportingMonth
     );
@@ -102,6 +102,16 @@ export const RestrictivePracticesModule: React.FC = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    } else if (format === 'XML') {
+      const blob = new Blob([xmlExport], { type: 'application/xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `NDIS_Commission_RP_MonthlyReturn_${reportingMonth}.xml`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } else if (format === 'PRINT') {
       const w = window.open('', '_blank');
       if (w) {
@@ -121,7 +131,7 @@ export const RestrictivePracticesModule: React.FC = () => {
 
     addNotification({
       title: 'RP Monthly Return Exported',
-      message: `NDIS Quality and Safeguards Commission report exported for ${reportingMonth}.`,
+      message: `NDIS Quality and Safeguards Commission report exported for ${reportingMonth} (${format}).`,
       type: 'compliance',
       severity: 'info',
       linkTab: 'restrictive'
@@ -130,6 +140,25 @@ export const RestrictivePracticesModule: React.FC = () => {
 
   const authorizedCount = restrictivePractices.filter(r => r.status === 'Authorized' || r.status === 'Active').length;
   const emergencyCount = restrictivePractices.filter(r => r.status === 'Proposed' || (r.description && r.description.toLowerCase().includes('emergency'))).length;
+
+  // Helper to calculate days remaining until expiry
+  const getExpiryDetails = (expiryDateStr?: string) => {
+    if (!expiryDateStr) return { days: 180, isExpiringSoon: false, isExpired: false, label: 'No date specified' };
+    const expiry = new Date(expiryDateStr).getTime();
+    const now = Date.now();
+    const diffDays = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+    return {
+      days: diffDays,
+      isExpiringSoon: diffDays <= 30 && diffDays > 0,
+      isExpired: diffDays <= 0,
+      label: diffDays <= 0 ? 'EXPIRED' : `${diffDays} days remaining`
+    };
+  };
+
+  const expiringSoonCount = restrictivePractices.filter(r => {
+    const details = getExpiryDetails(r.expiryDate);
+    return details.isExpiringSoon || details.isExpired;
+  }).length;
 
   return (
     <div className="space-y-6">
@@ -173,6 +202,32 @@ export const RestrictivePracticesModule: React.FC = () => {
         </div>
       </div>
 
+      {/* Proactive Statutory Alert Banner */}
+      {(emergencyCount > 0 || expiringSoonCount > 0) && (
+        <div className="bg-gradient-to-r from-amber-950/60 to-rose-950/60 border border-amber-500/40 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-amber-500/20 text-amber-400 rounded-lg shrink-0 mt-0.5 sm:mt-0">
+              <AlertTriangle className="w-5 h-5 text-amber-400 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                Senior Practitioner Statutory Compliance Attention Required
+              </h3>
+              <p className="text-xs text-amber-200/90 mt-0.5">
+                {emergencyCount > 0 && `${emergencyCount} emergency / unauthorized practice requires immediate clinical panel review. `}
+                {expiringSoonCount > 0 && `${expiringSoonCount} authorization order(s) expiring within 30 days. Action renewal prior to lapse.`}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsExportModalOpen(true)}
+            className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold rounded-lg transition-all self-start sm:self-auto shrink-0"
+          >
+            Review Portal Return
+          </button>
+        </div>
+      )}
+
       {/* Compliance Metrics Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="p-3.5 bg-slate-900 rounded-xl border border-slate-800 text-center">
@@ -184,9 +239,9 @@ export const RestrictivePracticesModule: React.FC = () => {
           <span className="text-xl font-extrabold text-emerald-400 font-mono">{authorizedCount}</span>
         </div>
         <div className="p-3.5 bg-slate-900 rounded-xl border border-slate-800 text-center">
-          <span className="text-[10px] text-slate-400 uppercase font-mono block font-bold">Emergency / Unauthorized</span>
-          <span className={`text-xl font-extrabold font-mono ${emergencyCount > 0 ? 'text-amber-400' : 'text-slate-400'}`}>
-            {emergencyCount}
+          <span className="text-[10px] text-slate-400 uppercase font-mono block font-bold">Expiring &le;30 Days / Expired</span>
+          <span className={`text-xl font-extrabold font-mono ${expiringSoonCount > 0 ? 'text-rose-400' : 'text-slate-400'}`}>
+            {expiringSoonCount}
           </span>
         </div>
         <div className="p-3.5 bg-slate-900 rounded-xl border border-slate-800 text-center">
@@ -197,60 +252,77 @@ export const RestrictivePracticesModule: React.FC = () => {
 
       {/* Practice Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {restrictivePractices.map((practice: RestrictivePractice) => (
-          <div key={practice.id} className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-sm">
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="text-[10px] bg-amber-500/10 text-amber-400 font-mono px-2 py-0.5 rounded font-bold border border-amber-500/20 uppercase tracking-wider">
-                  {practice.practiceType} Restrictive Practice
+        {restrictivePractices.map((practice: RestrictivePractice) => {
+          const expiryInfo = getExpiryDetails(practice.expiryDate);
+          return (
+            <div key={practice.id} className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-sm flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="text-[10px] bg-amber-500/10 text-amber-400 font-mono px-2 py-0.5 rounded font-bold border border-amber-500/20 uppercase tracking-wider">
+                      {practice.practiceType} Restrictive Practice
+                    </span>
+                    <h3 className="text-base font-bold text-white mt-1.5">{practice.clientName}</h3>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                      {practice.status}
+                    </span>
+                    {/* Expiry Badge */}
+                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
+                      expiryInfo.isExpired
+                        ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                        : expiryInfo.isExpiringSoon
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse'
+                        : 'bg-slate-800 text-slate-400 border-slate-700'
+                    }`}>
+                      {expiryInfo.label}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-300 leading-relaxed bg-slate-950 p-3 rounded-lg border border-slate-800/80">
+                  {practice.description}
+                </p>
+
+                <div className="p-2.5 bg-slate-950/70 rounded-lg border border-slate-800/60 text-xs">
+                  <span className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Fading Protocol / Reduction Strategy:</span>
+                  <p className="text-slate-300 text-[11px] leading-snug">
+                    {practice.reductionPlanSummary || 'Fading plan monitored by lead practitioner with environmental modifications.'}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-slate-400 bg-slate-950/50 p-2.5 rounded-lg border border-slate-800/50">
+                  <div>
+                    <span className="text-slate-500 block text-[9px] uppercase">Auth Body</span>
+                    <span className="text-slate-200 font-semibold">{practice.authorizationBody}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[9px] uppercase">Reference #</span>
+                    <span className="text-teal-400 font-bold">{practice.authorizationReference}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs pt-3 border-t border-slate-800">
+                <span className="text-slate-400">
+                  Expiry: <span className="text-white font-mono">{practice.expiryDate}</span>
                 </span>
-                <h3 className="text-base font-bold text-white mt-1.5">{practice.clientName}</h3>
-              </div>
-
-              <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
-                {practice.status}
-              </span>
-            </div>
-
-            <p className="text-xs text-slate-300 leading-relaxed bg-slate-950 p-3 rounded-lg border border-slate-800/80">
-              {practice.description}
-            </p>
-
-            <div className="p-2.5 bg-slate-950/70 rounded-lg border border-slate-800/60 text-xs">
-              <span className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Fading Protocol / Reduction Strategy:</span>
-              <p className="text-slate-300 text-[11px] leading-snug">
-                {practice.reductionPlanSummary || 'Fading plan monitored by lead practitioner with environmental modifications.'}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-slate-400 bg-slate-950/50 p-2.5 rounded-lg border border-slate-800/50">
-              <div>
-                <span className="text-slate-500 block text-[9px] uppercase">Auth Body</span>
-                <span className="text-slate-200 font-semibold">{practice.authorizationBody}</span>
-              </div>
-              <div>
-                <span className="text-slate-500 block text-[9px] uppercase">Reference #</span>
-                <span className="text-teal-400 font-bold">{practice.authorizationReference}</span>
+                <span className="text-emerald-400 font-bold flex items-center gap-1">
+                  <FileCheck className="w-3.5 h-3.5" />
+                  Monthly Log: {practice.monthlyReportStatus}
+                </span>
               </div>
             </div>
-
-            <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-800">
-              <span className="text-slate-400">
-                Expiry: <span className="text-white font-mono">{practice.expiryDate}</span>
-              </span>
-              <span className="text-emerald-400 font-bold flex items-center gap-1">
-                <FileCheck className="w-3.5 h-3.5" />
-                Monthly Log: {practice.monthlyReportStatus}
-              </span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Export Monthly Return Modal */}
       {isExportModalOpen && (
         <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-lg w-full space-y-4 shadow-xl">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-xl w-full space-y-4 shadow-xl">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <FileSpreadsheet className="w-5 h-5 text-teal-400" />
@@ -287,7 +359,14 @@ export const RestrictivePracticesModule: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 pt-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
+                <button
+                  onClick={() => handleExportCommissionReport('XML')}
+                  className="p-3 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold rounded-xl border border-amber-500/30 flex flex-col items-center gap-1.5 text-center transition-all"
+                >
+                  <Download className="w-4 h-4 text-amber-400" />
+                  <span>Download XML (Commission)</span>
+                </button>
                 <button
                   onClick={() => handleExportCommissionReport('CSV')}
                   className="p-3 bg-slate-800 hover:bg-slate-700 text-teal-300 font-bold rounded-xl border border-teal-500/30 flex flex-col items-center gap-1.5 text-center transition-all"

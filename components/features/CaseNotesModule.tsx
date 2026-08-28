@@ -148,7 +148,17 @@ export const CaseNotesModule: React.FC = () => {
         setSpeechInterimText(interim);
 
         if (finalChunk) {
-          const cleaned = finalChunk.trim();
+          // Smart Clinical Voice Commands & Punctuation
+          let cleaned = finalChunk.trim();
+          cleaned = cleaned
+            .replace(/\b(full stop|period)\b/gi, '.')
+            .replace(/\b(comma)\b/gi, ',')
+            .replace(/\b(question mark)\b/gi, '?')
+            .replace(/\b(exclamation mark|exclamation point)\b/gi, '!')
+            .replace(/\b(new line|next line)\b/gi, '\n')
+            .replace(/\b(new paragraph|next paragraph)\b/gi, '\n\n')
+            .replace(/\b(bullet point|bullet)\b/gi, '• ');
+
           if (isStream) {
             setStreamTranscript((prev) => (prev ? `${prev} ${cleaned}` : cleaned));
           } else {
@@ -590,6 +600,32 @@ ${rawText}`;
                   </span>
                 )}
               </p>
+
+              {/* Audio Waveform Equalizer Animation */}
+              {isListening && (
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center gap-1">
+                    {[12, 24, 16, 32, 20, 28, 14, 30, 22, 18, 26, 12].map((height, i) => (
+                      <div
+                        key={i}
+                        className="w-1 bg-gradient-to-t from-teal-500 to-rose-400 rounded-full animate-pulse"
+                        style={{
+                          height: `${height}px`,
+                          animationDelay: `${i * 80}ms`,
+                          animationDuration: '600ms'
+                        }}
+                      />
+                    ))}
+                    <span className="text-[10px] text-teal-400 font-mono font-bold ml-2">
+                      Live Speech Stream Active (en-AU)
+                    </span>
+                  </div>
+
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    Voice punctuation active: say &ldquo;full stop&rdquo;, &ldquo;comma&rdquo;, &ldquo;next paragraph&rdquo;
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
@@ -968,6 +1004,34 @@ ${rawText}`;
           </div>
         </div>
       </div>
+
+      {/* Floating Mobile Voice Dictation Quick Dock */}
+      {!isViewer && (
+        <div className="fixed bottom-16 right-4 sm:right-6 z-30 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleFullStreamDictation}
+            className={`px-4 py-2.5 rounded-2xl text-xs font-bold shadow-2xl backdrop-blur-md flex items-center gap-2.5 transition-all border ${
+              isListening && dictationMode === 'FULL_STREAM'
+                ? 'bg-rose-600 hover:bg-rose-500 text-white border-rose-400 animate-pulse'
+                : 'bg-slate-900/90 hover:bg-slate-800 text-teal-300 border-teal-500/40 hover:border-teal-400'
+            }`}
+            title="Hands-free mobile voice dictation stream"
+          >
+            {isListening && dictationMode === 'FULL_STREAM' ? (
+              <>
+                <MicOff className="w-4 h-4 text-white" />
+                <span>Stop Voice Dictation</span>
+              </>
+            ) : (
+              <>
+                <Mic className="w-4 h-4 text-teal-400" />
+                <span>Dictate Note (Voice)</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

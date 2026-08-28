@@ -11,7 +11,12 @@ import {
   Tooltip,
   Cell,
   CartesianGrid,
-  Legend
+  Legend,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar
 } from 'recharts';
 import { useManagementStore } from '@/stores/useManagementStore';
 import { Client, ClientGoal, CaseNote } from '@/types';
@@ -75,6 +80,7 @@ export const NDISGoalTracker: React.FC<NDISGoalTrackerProps> = ({
   }, [clients, activeClientId]);
 
   // Filters & State
+  const [chartView, setChartView] = useState<'BAR' | 'RADAR'>('BAR');
   const [filterCategory, setFilterCategory] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [isAddingGoal, setIsAddingGoal] = useState(false);
@@ -143,6 +149,25 @@ export const NDISGoalTracker: React.FC<NDISGoalTrackerProps> = ({
       linkedNotesCount: g.linkedNoteIds?.length || 0,
       gasScore: g.gasScore ?? 0,
     }));
+  }, [client?.goals]);
+
+  // Multiaxial Radar Chart Data for GAS Outcomes & NDIS Benchmarking
+  const radarChartData = useMemo(() => {
+    if (!client?.goals || client.goals.length === 0) return [];
+    return client.goals.map((g) => {
+      const gasVal = g.gasScore ?? 0;
+      // Convert GAS -2..+2 to scaled 20..100 for visual radar display
+      const gasScaled = (gasVal + 2) * 20 + 20;
+      return {
+        domain: g.title.length > 18 ? `${g.title.slice(0, 18)}...` : g.title,
+        fullTitle: g.title,
+        CurrentGAS: Math.min(100, Math.max(10, gasScaled)),
+        Baseline: 40,
+        TargetBenchmark: 80,
+        progressPercent: g.progressPercent,
+        gasScore: gasVal,
+      };
+    });
   }, [client?.goals]);
 
   // Handle Creating Goal
@@ -372,7 +397,7 @@ Format with:
         </div>
       </div>
 
-      {/* Goal Progress Bar Chart Visualization */}
+      {/* Goal Progress & GAS Radar Chart Visualization */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2.5">
@@ -380,12 +405,38 @@ Format with:
               <BarChart2 className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white">NDIS Goal Progress Breakdown (% Completed)</h3>
-              <p className="text-xs text-slate-400">Visual progress distribution across capacity building and core goals</p>
+              <h3 className="text-sm font-bold text-white">
+                {chartView === 'BAR' ? 'NDIS Goal Progress Breakdown (% Completed)' : 'Multiaxial GAS Outcome Spider/Radar Visualizer'}
+              </h3>
+              <p className="text-xs text-slate-400">
+                {chartView === 'BAR'
+                  ? 'Visual progress distribution across capacity building and core goals'
+                  : 'Goal Attainment Scaling progression mapped against NDIS Reasonable & Necessary baseline'}
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Toggle View Buttons */}
+            <div className="flex items-center bg-slate-950 p-1 rounded-lg border border-slate-800">
+              <button
+                onClick={() => setChartView('BAR')}
+                className={`px-2.5 py-1 rounded text-xs font-bold transition-all ${
+                  chartView === 'BAR' ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Progress Bar
+              </button>
+              <button
+                onClick={() => setChartView('RADAR')}
+                className={`px-2.5 py-1 rounded text-xs font-bold transition-all ${
+                  chartView === 'RADAR' ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                GAS Radar / Spider
+              </button>
+            </div>
+
             <span className="text-[10px] bg-slate-950 text-slate-300 font-mono px-2.5 py-1 rounded-lg border border-slate-800">
               Participant: <strong className="text-teal-300">{client?.name}</strong>
             </span>
@@ -397,7 +448,7 @@ Format with:
             <AlertCircle className="w-6 h-6 text-slate-600 mx-auto mb-2" />
             No goals configured for this client yet. Click &quot;Add NDIS Goal&quot; to create one.
           </div>
-        ) : (
+        ) : chartView === 'BAR' ? (
           <div className="h-72 w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -456,6 +507,68 @@ Format with:
                   ))}
                 </Bar>
               </BarChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          /* Multiaxial GAS Radar / Spider View */
+          <div className="h-80 w-full pt-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart data={radarChartData} margin={{ top: 10, right: 30, left: 30, bottom: 10 }}>
+                <PolarGrid stroke="#334155" />
+                <PolarAngleAxis dataKey="domain" stroke="#94a3b8" fontSize={11} />
+                <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#475569" fontSize={9} />
+                <Radar
+                  name="Baseline Benchmark"
+                  dataKey="Baseline"
+                  stroke="#64748b"
+                  fill="#64748b"
+                  fillOpacity={0.15}
+                  strokeDasharray="4 4"
+                />
+                <Radar
+                  name="NDIA Reasonable Target"
+                  dataKey="TargetBenchmark"
+                  stroke="#0ea5e9"
+                  fill="#0ea5e9"
+                  fillOpacity={0.2}
+                />
+                <Radar
+                  name="Current GAS Progression"
+                  dataKey="CurrentGAS"
+                  stroke="#14b8a6"
+                  fill="#14b8a6"
+                  fillOpacity={0.5}
+                />
+                <Legend
+                  wrapperStyle={{ fontSize: '11px', color: '#94a3b8', paddingTop: '10px' }}
+                />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-slate-900 border border-slate-700 p-3 rounded-xl shadow-xl text-xs space-y-1 z-50">
+                          <p className="font-bold text-white">{data.fullTitle}</p>
+                          <p className="text-teal-400 font-mono">GAS Score: {data.gasScore > 0 ? `+${data.gasScore}` : data.gasScore}</p>
+                          <p className="text-sky-400 font-mono">Overall Progress: {data.progressPercent}%</p>
+                          <p className="text-slate-400 text-[10px]">
+                            {data.gasScore === 2
+                              ? 'Much more than expected outcome'
+                              : data.gasScore === 1
+                              ? 'More than expected outcome'
+                              : data.gasScore === 0
+                              ? 'Expected standard baseline achieved'
+                              : data.gasScore === -1
+                              ? 'Less than expected outcome'
+                              : 'Much less than expected outcome'}
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+              </RadarChart>
             </ResponsiveContainer>
           </div>
         )}

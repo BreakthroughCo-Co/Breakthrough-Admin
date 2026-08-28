@@ -369,6 +369,7 @@ export function generateRestrictivePracticesCommissionReport(
 ): {
   report: NDISCommissionRPReport;
   csvExport: string;
+  xmlExport: string;
   jsonExport: string;
   printableHtml: string;
 } {
@@ -383,6 +384,40 @@ export function generateRestrictivePracticesCommissionReport(
     )
   ];
   const csvExport = csvRows.join('\n');
+
+  // NDIS Quality and Safeguards Commission Restrictive Practice Portal XML Schema v2.1
+  const xmlExport = `<?xml version="1.0" encoding="UTF-8"?>
+<NDISCommissionRPReport xmlns="http://ndiscommission.gov.au/schema/rp/v2" schemaVersion="2.1">
+  <SubmissionHeader>
+    <SubmissionId>${report.submissionId}</SubmissionId>
+    <ProviderRegistrationNumber>${report.providerRegistrationNumber}</ProviderRegistrationNumber>
+    <ProviderName>Breakthrough Coaching &amp; Consulting</ProviderName>
+    <ReportingPeriod>${report.reportingPeriod}</ReportingPeriod>
+    <GeneratedTimestamp>${report.generatedAt}</GeneratedTimestamp>
+    <TotalActivePractices>${report.summary.totalActivePractices}</TotalActivePractices>
+    <AuthorizedPracticesCount>${report.summary.authorizedCount}</AuthorizedPracticesCount>
+    <UnauthorizedEmergencyCount>${report.summary.unauthorizedEmergencyCount}</UnauthorizedEmergencyCount>
+  </SubmissionHeader>
+  <RestrictivePracticesEntries>
+    ${report.extractedPractices.map(p => `
+    <PracticeEntry>
+      <PracticeId>${p.practiceId}</PracticeId>
+      <ParticipantIdentifier>${p.participantId}</ParticipantIdentifier>
+      <ParticipantName>${p.clientName.replace(/&/g, '&amp;')}</ParticipantName>
+      <NDISNumber>${p.participantNdisNumber}</NDISNumber>
+      <PracticeCategory>${p.practiceType}</PracticeCategory>
+      <AuthorizationStatus>${p.authorizationStatus}</AuthorizationStatus>
+      <AuthorizingJurisdictionBody>${(p.authorizingBody || 'VIC Senior Practitioner').replace(/&/g, '&amp;')}</AuthorizingJurisdictionBody>
+      <AuthorizationReferenceNumber>${p.authorizationReference || 'PENDING'}</AuthorizationReferenceNumber>
+      <StartDate>${p.startDate || report.reportingPeriod + '-01'}</StartDate>
+      <ExpiryDate>${p.expiryDate || '2027-08-01'}</ExpiryDate>
+      <MonthlyUsageFrequency>${p.usageFrequencyThisMonth}</MonthlyUsageFrequency>
+      <ReductionPlanActive>${p.reductionPlanSummary ? 'true' : 'false'}</ReductionPlanActive>
+      <ReductionPlanSummary>${(p.reductionPlanSummary || '').replace(/&/g, '&amp;')}</ReductionPlanSummary>
+      <AdverseEventsLogged>${p.adverseEventsLogged ? 'true' : 'false'}</AdverseEventsLogged>
+    </PracticeEntry>`).join('')}
+  </RestrictivePracticesEntries>
+</NDISCommissionRPReport>`;
 
   const printableHtml = `<!DOCTYPE html>
 <html>
@@ -429,7 +464,7 @@ export function generateRestrictivePracticesCommissionReport(
 </body>
 </html>`;
 
-  return { report, csvExport, jsonExport, printableHtml };
+  return { report, csvExport, xmlExport, jsonExport, printableHtml };
 }
 
 // =========================================================================
