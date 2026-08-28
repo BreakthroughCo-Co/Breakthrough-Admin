@@ -8,6 +8,7 @@ import { queryCommandCenterAI } from '@/lib/ai-assistant';
 import { DueForReviewSummaryWidget } from '@/components/features/DueForReviewSummaryWidget';
 import { QuickActionsFloatingMenu } from '@/components/features/QuickActionsFloatingMenu';
 import { FinancialSyncHealthWidget } from '@/components/features/FinancialSyncHealthWidget';
+import { RecentActivityFeed } from '@/components/features/RecentActivityFeed';
 import {
   Users,
   ShieldAlert,
@@ -1480,6 +1481,9 @@ export const CommandCenter: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* TEAM OPERATIONAL CHRONOLOGICAL ACTIVITY FEED */}
+      <RecentActivityFeed />
 
       {/* FLOATING SUMMARY WIDGET: Real-time Incident & Severity Distribution Tracker */}
       {isIncidentWidgetOpen && (

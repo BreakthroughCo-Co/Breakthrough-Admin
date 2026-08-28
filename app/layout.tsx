@@ -44,16 +44,14 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').then(
-                    function(registration) {
-                      console.log('[PWA] ServiceWorker registration successful with scope: ', registration.scope);
-                    },
-                    function(err) {
-                      console.warn('[PWA] ServiceWorker registration failed: ', err);
+                // Ensure service worker is unregistered in development to prevent stale script caching
+                if (window.location.hostname === 'localhost' || window.location.hostname.includes('run.app')) {
+                  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for (var i = 0; i < registrations.length; i++) {
+                      registrations[i].unregister();
                     }
-                  );
-                });
+                  });
+                }
               }
             `,
           }}

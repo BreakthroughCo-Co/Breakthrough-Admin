@@ -85,32 +85,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For static assets & navigate requests (CacheFirst with Network Fallback)
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200) {
-          const clone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, clone);
-          });
-        }
-        return networkResponse;
-      }).catch(async () => {
-        if (event.request.mode === 'navigate') {
-          const fallback = await caches.match(OFFLINE_URL);
-          if (fallback) return fallback;
-        }
-        return new Response('Operating Offline in Breakthrough OS Field Mode', {
-          status: 503,
-          statusText: 'Service Unavailable Offline'
-        });
-      });
-    })
-  );
+  // For static assets & navigate requests (NetworkFirst with fallback)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(async () => {
+        const cached = await caches.match(OFFLINE_URL);
+        if (cached) return cached;
+        return new Response('Offline', { status: 503 });
+      })
+    );
+    return;
+  }
+
+  // Pass through all other requests directly
+  return;
 });
 
 // Background sync handler for offline mutation replay

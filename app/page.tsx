@@ -138,12 +138,12 @@ export default function Page() {
   useEffect(() => {
     setMounted(true);
 
-    // Safety timeout: Release loading screen if Firebase Auth has not completed in 2.5s
+    // Fast-path safety timeout: Release loading screen in 400ms if session exists or fast fallback
     const safetyTimeout = setTimeout(() => {
       if (useManagementStore.getState().authLoading) {
         useManagementStore.setState({ authLoading: false });
       }
-    }, 2500);
+    }, 400);
 
     // Subscribe to Firebase Auth changes to automatically restore session without dropping
     const unsubscribe = onAuthUserChanged(async (firebaseUser) => {

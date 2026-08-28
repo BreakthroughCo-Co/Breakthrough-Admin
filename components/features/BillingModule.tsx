@@ -7,6 +7,7 @@ import { validateBillingClaim } from '@/lib/ai-assistant';
 import { XeroOAuthService } from '@/lib/xeroService';
 import { NDISPricingSyncEngine } from '@/lib/ndisPricingService';
 import { ProdaBatchModal } from './ProdaBatchModal';
+import { FinancialControl } from './FinancialControl';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -134,7 +135,7 @@ export const BillingModule: React.FC = () => {
   const isViewer = currentUser?.role === 'VIEWER';
   const isAdmin = currentUser?.role === 'ADMIN';
   
-  const [activeTab, setActiveTab] = useState<'CLAIMS' | 'PRICE_GUIDE' | 'CALCULATOR' | 'BURN_RATE'>('CLAIMS');
+  const [activeTab, setActiveTab] = useState<'CLAIMS' | 'FINANCIAL_CONTROL' | 'PRICE_GUIDE' | 'CALCULATOR' | 'BURN_RATE'>('FINANCIAL_CONTROL');
   const [selectedClient, setSelectedClient] = useState(clients[0]?.id || 'cli-101');
   const [burnRateClientId, setBurnRateClientId] = useState(clients[0]?.id || 'cli-101');
   const [selectedSupport, setSelectedSupport] = useState(supportItems[0]?.code || '07_002_0115_8_3');
@@ -661,6 +662,29 @@ export const BillingModule: React.FC = () => {
       invoiceNumber: `INV-2026-${Math.floor(Math.random() * 9000 + 1000)}`,
     });
 
+    const newSpent = (selectedClientObj.spentBudget || 0) + total;
+    const budget = selectedClientObj.totalBudget || 1;
+    const utilization = newSpent / budget;
+    const previousUtilization = (selectedClientObj.spentBudget || 0) / budget;
+
+    if (utilization >= 0.9 && previousUtilization < 0.9) {
+      addNotification({
+        title: `CRITICAL: NDIS Plan Budget Alert for ${selectedClientObj.name}`,
+        message: `Budget utilization has reached ${(utilization * 100).toFixed(1)}%. Immediate review required.`,
+        type: 'billing',
+        severity: 'high',
+        linkTab: 'billing'
+      });
+    } else if (utilization >= 0.8 && previousUtilization < 0.8) {
+      addNotification({
+        title: `WARNING: NDIS Plan Budget Alert for ${selectedClientObj.name}`,
+        message: `Budget utilization has reached ${(utilization * 100).toFixed(1)}%.`,
+        type: 'billing',
+        severity: 'medium',
+        linkTab: 'billing'
+      });
+    }
+
     setIsAdding(false);
   };
 
@@ -1013,10 +1037,22 @@ export const BillingModule: React.FC = () => {
       {/* Sub Navigation Bar */}
       <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
         <button
+          onClick={() => setActiveTab('FINANCIAL_CONTROL')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
+            activeTab === 'FINANCIAL_CONTROL'
+              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 shadow-sm'
+              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+          }`}
+        >
+          <Activity className="w-4 h-4 text-emerald-400" />
+          <span>Financial Control & PACE Analytics</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('CLAIMS')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
             activeTab === 'CLAIMS'
-              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+              ? 'bg-teal-500/15 text-teal-300 border-teal-500/40 shadow-sm'
               : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
           }`}
         >
@@ -1026,7 +1062,7 @@ export const BillingModule: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('PRICE_GUIDE')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
             activeTab === 'PRICE_GUIDE'
               ? 'bg-teal-500/10 text-teal-300 border-teal-500/30'
               : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
@@ -1038,7 +1074,7 @@ export const BillingModule: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('CALCULATOR')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
             activeTab === 'CALCULATOR'
               ? 'bg-sky-500/10 text-sky-300 border-sky-500/30'
               : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
@@ -1050,7 +1086,7 @@ export const BillingModule: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('BURN_RATE')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
             activeTab === 'BURN_RATE'
               ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
               : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
@@ -1060,6 +1096,15 @@ export const BillingModule: React.FC = () => {
           <span>Funding Burn Rate & Trajectory Analytics</span>
         </button>
       </div>
+
+      {/* TAB 0: FINANCIAL CONTROL & PACE ANALYTICS */}
+      {activeTab === 'FINANCIAL_CONTROL' && (
+        <FinancialControl
+          billingClaims={billingClaims}
+          onAutoReconcile={handleRunReconciliationAudit}
+          isReconciling={isReconciling}
+        />
+      )}
 
       {/* TAB 1: CLAIMS TABLE */}
       {activeTab === 'CLAIMS' && (

@@ -527,7 +527,7 @@ export const HRModule: React.FC = () => {
                         if (client.restrictivePracticesActive && (p.pbsRegistrationLevel === 'Advanced Practitioner' || p.pbsRegistrationLevel === 'Proficient Practitioner')) {
                           score += 20;
                         }
-                        if (p.caseloadLimit - p.activeCaseloadCount <= 0) score -= 50;
+                        if ((p.caseloadLimit || 40) - (p.activeCaseloadCount || 0) <= 0) score -= 50;
                         return score;
                       };
                       return getScore(b) - getScore(a);
@@ -768,7 +768,7 @@ export const HRModule: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {practitioners.map((prac: Practitioner) => {
-                const availableHeadroom = prac.caseloadLimit - prac.activeCaseloadCount;
+                const availableHeadroom = (prac.caseloadLimit || 40) - (prac.activeCaseloadCount || 0);
                 const isHighRisk = selectedClientObj.riskLevel === 'High' || selectedClientObj.riskLevel === 'Critical';
                 const requiresAdvancedPbs = selectedClientObj.restrictivePracticesActive || isHighRisk;
 

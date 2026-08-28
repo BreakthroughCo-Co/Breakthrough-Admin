@@ -134,10 +134,14 @@ export interface CaseNote {
   category?: string;
   serviceType?: string;
   supportItemCode?: string;
+  supportItemName?: string;
   linkedSupportItemCode?: string;
   invoiceNumber?: string;
   billedAmount?: number;
+  hourlyRate?: number;
+  totalAmount?: number;
   text?: string;
+  content?: string;
   situation?: string;
   intervention?: string;
   progress?: string;
@@ -147,6 +151,10 @@ export interface CaseNote {
   objective: string;  // Intervention / Objective
   assessment: string; // Measurement / Assessment
   plan: string;       // Next steps / Plan
+  soapSubjective?: string;
+  soapObjective?: string;
+  soapAssessment?: string;
+  soapPlan?: string;
   linkedGoalIds: string[];
   status: 'Draft' | 'Submitted' | 'Approved' | 'Archived';
   flaggedForReview: boolean;
@@ -258,11 +266,11 @@ export interface Practitioner {
   firstAidExpiryDate?: string;
   medicationCertExpiryDate?: string;
   mandatoryTrainingExpiryDate?: string;
-  ndisOrientationCompleted: boolean;
-  cpdHoursThisYear: number;
+  ndisOrientationCompleted?: boolean;
+  cpdHoursThisYear?: number;
   cpdHoursRequired?: number;
-  caseloadLimit: number;
-  activeCaseloadCount: number;
+  caseloadLimit?: number;
+  activeCaseloadCount?: number;
   activeCaseload?: number;
   historicalSuccessRate?: number; // e.g. 98 (%)
   completedSessionsCount?: number; // e.g. 420

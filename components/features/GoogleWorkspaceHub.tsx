@@ -1102,16 +1102,23 @@ export function GoogleWorkspaceHub() {
           });
           clientsAdded++;
         } else if (isCaseNoteFile) {
+          const noteDate = new Date().toISOString().split('T')[0];
           addCaseNote({
             clientId: matchingClient?.id || 'cli-101',
             clientName: matchingClient?.name || 'Jordan Miller',
             ndisNumber: matchingClient?.ndisNumber || '430891204',
             practitionerId: 'prac-201',
             practitionerName: 'Dr. Sarah Jenkins',
-            sessionDate: new Date().toISOString().split('T')[0],
+            date: noteDate,
+            sessionDate: noteDate,
+            sessionDurationMinutes: 60,
             durationMinutes: 60,
             format: 'SOAP',
             content: fileContent || `Clinical session record imported from Google Drive file: ${file.name}. Validated against NDIS Practice Standards.`,
+            subjective: `Participant engaged in consultation session. Documentation synced from Google Drive document ${file.name}.`,
+            objective: `Observed steady engagement. File record: ${file.webViewLink || 'Synced Drive File'}`,
+            assessment: 'Demonstrated functional progress aligned with Capacity Building goals.',
+            plan: 'Continue current positive reinforcement strategy and monitor trigger frequencies.',
             soapSubjective: `Participant engaged in consultation session. Documentation synced from Google Drive document ${file.name}.`,
             soapObjective: `Observed steady engagement. File record: ${file.webViewLink || 'Synced Drive File'}`,
             soapAssessment: 'Demonstrated functional progress aligned with Capacity Building goals.',
@@ -1123,7 +1130,10 @@ export function GoogleWorkspaceHub() {
             totalAmount: 214.41,
             billable: true,
             isVerified: true,
-            verifiedBy: 'System Auto-Ingest'
+            verifiedBy: 'System Auto-Ingest',
+            linkedGoalIds: [],
+            status: 'Approved',
+            flaggedForReview: false
           });
           caseNotesAdded++;
         } else if (isLeadFile) {
@@ -1155,7 +1165,11 @@ export function GoogleWorkspaceHub() {
             workerScreeningExpiry: '2028-06-30',
             screeningStatus: 'Valid',
             screeningExpiryDate: '2028-06-30',
-            policeCheckExpiryDate: '2027-12-31'
+            policeCheckExpiryDate: '2027-12-31',
+            ndisOrientationCompleted: true,
+            cpdHoursThisYear: 18,
+            caseloadLimit: 25,
+            activeCaseloadCount: 12
           });
           staffAdded++;
         } else if (isBillingFile) {
@@ -1163,32 +1177,26 @@ export function GoogleWorkspaceHub() {
             clientId: matchingClient?.id || 'cli-101',
             clientName: matchingClient?.name || 'Jordan Miller',
             ndisNumber: matchingClient?.ndisNumber || '430891204',
-            claimType: 'Capacity Building - Improved Relationships',
             supportItemCode: '07_002_0115_8_3',
-            supportItemName: 'Specialist Behavioural Intervention Support',
+            ndisSupportItem: '07_002_0115_8_3 - Specialist Behavioural Intervention Support',
             hours: 2.0,
-            rate: 214.41,
+            unitRate: 214.41,
             totalAmount: 428.82,
             serviceDate: new Date().toISOString().split('T')[0],
-            status: 'Draft',
-            claimBatchId: `BATCH-DRIVE-${Date.now().toString().slice(-4)}`
+            status: 'Pending',
+            invoiceNumber: `INV-2026-${Math.floor(Math.random() * 9000 + 1000)}`
           });
           claimsAdded++;
         } else if (isBSPFile) {
           addBSPPlan({
             id: `bsp-${Date.now().toString().slice(-4)}`,
             clientId: matchingClient?.id || 'cli-101',
-            participantName: matchingClient?.name || 'Jordan Miller',
-            participantNdisNumber: matchingClient?.ndisNumber || '430891204',
+            clientName: matchingClient?.name || 'Jordan Miller',
             authorName: 'Dr. Sarah Jenkins',
-            authorRole: 'Advanced PBS Practitioner',
-            practitionerRegistrationNumber: 'PRAC-NDIS-08492',
             version: '1.0',
             status: 'Draft',
-            startDate: new Date().toISOString().split('T')[0],
             reviewDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            lastUpdated: new Date().toISOString(),
-            executiveSummary: fileContent ? fileContent.slice(0, 600) : `Comprehensive Behaviour Support Plan imported from Google Drive: ${file.name}`,
+            summary: fileContent ? fileContent.slice(0, 600) : `Comprehensive Behaviour Support Plan imported from Google Drive: ${file.name}`,
             proactiveStrategies: [
               'Establish structured environmental cues and predictable routine',
               'Sensory decompression break intervals every 45 minutes',
@@ -1199,25 +1207,8 @@ export function GoogleWorkspaceHub() {
               'Phase 2: Remove hazardous items from immediate vicinity',
               'Phase 3: Support return to baseline with low-demand activity'
             ],
-            fbaHypotheses: [
-              {
-                id: `fba-${Date.now().toString().slice(-4)}`,
-                targetBehavior: 'Sensory Overload / Agitation',
-                antecedents: ['Loud noise', 'Crowded spaces', 'Sudden routine shift'],
-                functionOfBehavior: 'Sensory Regulation / Escape',
-                maintainingConsequences: 'Withdrawal from noisy room',
-                replacementBehavior: 'Use communication card to request quiet zone'
-              }
-            ],
-            emergencyProtocols: [
-              {
-                id: `ep-${Date.now().toString().slice(-4)}`,
-                situation: 'Acute Behavioral Crisis',
-                actions: ['Ensure physical safety', 'Contact designated clinical lead', 'De-escalate using positive communication'],
-                contactPerson: 'Clinical Lead / Emergency Services',
-                contactNumber: '0412 889 201'
-              }
-            ]
+            primaryBehaviorsOfConcern: ['Agitation', 'Withdrawal'],
+            restrictivePractices: []
           });
           bspsAdded++;
         } else if (isIncidentFile) {
@@ -1244,14 +1235,17 @@ export function GoogleWorkspaceHub() {
             ndisNumber: matchingClient?.ndisNumber || '430891204',
             practitionerId: 'prac-201',
             practitionerName: 'Dr. Sarah Jenkins',
-            sessionDate: new Date().toISOString().split('T')[0],
-            durationMinutes: 45,
+            date: new Date().toISOString().split('T')[0],
+            sessionDurationMinutes: 45,
             format: 'SOAP',
             content: fileContent || `Document Record: ${file.name}\nGoogle Drive Link: ${file.webViewLink || 'Synced'}\nSynced into Practice Database.`,
-            soapSubjective: `Evidence and documentation imported from file: ${file.name}`,
-            soapObjective: `File MIME: ${file.mimeType} | Size: ${file.size ? `${(parseInt(file.size, 10)/1024).toFixed(1)} KB` : 'Doc'}`,
-            soapAssessment: 'File audited and linked to participant portfolio.',
-            soapPlan: 'Maintain file in perpetual NDIS audit evidence vault.',
+            subjective: `Evidence and documentation imported from file: ${file.name}`,
+            objective: `File MIME: ${file.mimeType} | Size: ${file.size ? `${(parseInt(file.size, 10)/1024).toFixed(1)} KB` : 'Doc'}`,
+            assessment: 'File audited and linked to participant portfolio.',
+            plan: 'Maintain file in perpetual NDIS audit evidence vault.',
+            linkedGoalIds: [],
+            status: 'Approved',
+            flaggedForReview: false,
             supportItemCode: '15_056_0128_1_3',
             supportItemName: 'Specialist Behavioural Intervention Support',
             billableHours: 0.75,
@@ -3806,7 +3800,7 @@ export function GoogleWorkspaceHub() {
               <button
                 onClick={() => {
                   setIsCreateFolderModalOpen(false);
-                  setNewFolderName('');
+                  setNewDriveFolderName('');
                 }}
                 className="text-slate-400 hover:text-slate-200"
               >
@@ -3820,12 +3814,12 @@ export function GoogleWorkspaceHub() {
                 <input
                   type="text"
                   placeholder="e.g. Participant BSP Records 2026"
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
+                  value={newDriveFolderName}
+                  onChange={(e) => setNewDriveFolderName(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
                   autoFocus
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && newFolderName.trim()) {
+                    if (e.key === 'Enter' && newDriveFolderName.trim()) {
                       handleCreateFolderInDrive();
                     }
                   }}
@@ -3865,7 +3859,7 @@ export function GoogleWorkspaceHub() {
                 type="button"
                 onClick={() => {
                   setIsCreateFolderModalOpen(false);
-                  setNewFolderName('');
+                  setNewDriveFolderName('');
                 }}
                 className="px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 rounded-lg transition"
               >
@@ -3874,7 +3868,7 @@ export function GoogleWorkspaceHub() {
               <button
                 type="button"
                 onClick={handleCreateFolderInDrive}
-                disabled={!newFolderName.trim() || loading}
+                disabled={!newDriveFolderName.trim() || loading}
                 className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
               >
                 {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FolderPlus className="w-3.5 h-3.5" />}

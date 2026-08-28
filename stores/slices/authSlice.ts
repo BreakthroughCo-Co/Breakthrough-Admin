@@ -6,14 +6,42 @@ import { getUserProfile, saveUserProfile } from '@/lib/firestoreService';
 import { INITIAL_USERS } from '@/lib/seedData';
 import { AuthSlice, RootStore } from '../types';
 
+const CACHED_USER_KEY = 'breakthrough_auth_cached_profile';
+
+const getInitialCachedUser = (): { user: UserProfile; isAuthenticated: boolean } => {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem(CACHED_USER_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.id) {
+          return { user: parsed, isAuthenticated: true };
+        }
+      }
+    } catch {
+      // Ignore parse failure
+    }
+  }
+  return { user: INITIAL_USERS[0], isAuthenticated: false };
+};
+
+const initialCached = getInitialCachedUser();
+
 export const createAuthSlice: StateCreator<RootStore, [], [], AuthSlice> = (set, get) => ({
-  currentUser: INITIAL_USERS[0],
+  currentUser: initialCached.user,
   users: INITIAL_USERS,
-  isAuthenticated: false,
-  authLoading: true,
+  isAuthenticated: initialCached.isAuthenticated,
+  authLoading: false,
 
   setUserProfile: (profile: UserProfile | null) => {
     if (profile) {
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(CACHED_USER_KEY, JSON.stringify(profile));
+        } catch {
+          // ignore
+        }
+      }
       set({ currentUser: profile, isAuthenticated: true, authLoading: false });
       get().addAuditLog(
         'SET_PROFILE',
@@ -22,6 +50,13 @@ export const createAuthSlice: StateCreator<RootStore, [], [], AuthSlice> = (set,
         `User session profile updated: ${profile.name} (${profile.role})`
       );
     } else {
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem(CACHED_USER_KEY);
+        } catch {
+          // ignore
+        }
+      }
       set({ currentUser: INITIAL_USERS[0], isAuthenticated: false, authLoading: false });
     }
   },
@@ -31,6 +66,13 @@ export const createAuthSlice: StateCreator<RootStore, [], [], AuthSlice> = (set,
       await logOutGoogle();
     } catch (e) {
       console.warn('Sign out error:', e);
+    }
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem(CACHED_USER_KEY);
+      } catch {
+        // ignore
+      }
     }
     const currentId = get().currentUser?.id || 'unknown';
     set({
@@ -43,6 +85,13 @@ export const createAuthSlice: StateCreator<RootStore, [], [], AuthSlice> = (set,
 
   handleAuthUser: async (firebaseUser: User | null) => {
     if (!firebaseUser) {
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem(CACHED_USER_KEY);
+        } catch {
+          // ignore
+        }
+      }
       set({ isAuthenticated: false, authLoading: false });
       return null;
     }
@@ -77,6 +126,13 @@ export const createAuthSlice: StateCreator<RootStore, [], [], AuthSlice> = (set,
           console.warn('Could not persist new user profile to Firestore:', err)
         );
       }
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(CACHED_USER_KEY, JSON.stringify(profile));
+        } catch {
+          // ignore
+        }
+      }
       set({ currentUser: profile, isAuthenticated: true, authLoading: false });
       return profile;
     } catch (err) {
@@ -94,6 +150,13 @@ export const createAuthSlice: StateCreator<RootStore, [], [], AuthSlice> = (set,
         ndisOrientationDone: false,
         activeCaseload: 0
       };
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(CACHED_USER_KEY, JSON.stringify(fallback));
+        } catch {
+          // ignore
+        }
+      }
       set({ currentUser: fallback, isAuthenticated: true, authLoading: false });
       return fallback;
     }

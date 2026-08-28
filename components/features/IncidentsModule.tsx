@@ -26,16 +26,18 @@ import {
 } from 'lucide-react';
 import { Incident, Client } from '@/types';
 import { IncidentPDFReportModal } from './IncidentPDFReportModal';
+import { IncidentEscalationModal } from './IncidentEscalationModal';
 import { advanceIncidentWorkflow } from '@/lib/complianceService';
 
-const WORKFLOW_STEPS = ['Open', 'Investigating', 'Clinical Review', 'Director Sign-off', 'Closed'];
+const WORKFLOW_STEPS = ['Open', 'Investigating', 'Pending Review', 'Director Sign-off', 'Closed'];
 
 export const IncidentsModule: React.FC = () => {
-  const { incidents, clients, currentUser, addIncident, updateIncidentStatus, setActiveTab, addAuditLog, addNotification } = useManagementStore();
+  const { incidents, clients, currentUser, addIncident, updateIncidentStatus, setActiveTab, addAuditLog, addNotification, addCRMTask } = useManagementStore();
   const isViewer = currentUser?.role === 'VIEWER';
   const isAdmin = currentUser?.role === 'ADMIN';
   const [isAdding, setIsAdding] = useState(false);
   const [selectedIncidentForPDF, setSelectedIncidentForPDF] = useState<Incident | null>(null);
+  const [selectedIncidentForEscalation, setSelectedIncidentForEscalation] = useState<Incident | null>(null);
   const [selectedClient, setSelectedClient] = useState(clients[0]?.id || 'cli-101');
   const [aiAssessments, setAiAssessments] = useState<Record<string, string>>({});
   const [isAssessing, setIsAssessing] = useState<Record<string, boolean>>({});
@@ -48,7 +50,7 @@ export const IncidentsModule: React.FC = () => {
 
   const getStepIndex = (status: string) => {
     if (status === 'Investigating' || status === 'Under Investigation') return 1;
-    if (status === 'Clinical Review') return 2;
+    if (status === 'Pending Review' || status === 'Clinical Review') return 2;
     if (status === 'Director Sign-off') return 3;
     if (status === 'Closed' || status === 'Resolved') return 4;
     return 0;
@@ -90,6 +92,20 @@ export const IncidentsModule: React.FC = () => {
         severity: result.newStatus === 'Closed' ? 'success' : 'info',
         linkTab: 'incidents'
       });
+
+      if ((result.newStatus as string) === 'Pending Review' || (result.newStatus as string) === 'Clinical Review') {
+        addCRMTask({
+          title: `Follow-up Required: Incident for ${incident.clientName}`,
+          description: `Incident requires clinical review. Incident ID: ${incident.id}. Description: ${incident.description}`,
+          priority: incident.severity === 'Critical / Reportable' || incident.severity === 'High' ? 'High' : 'Medium',
+          status: 'Pending',
+          category: 'Compliance',
+          dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          assignedTo: 'user-director', // Assign to director by default
+          clientId: incident.clientId,
+          clientName: incident.clientName
+        });
+      }
     } catch (err: any) {
       setWorkflowError(err.message);
       if (err.message.includes('ADMIN')) {
@@ -534,19 +550,19 @@ export const IncidentsModule: React.FC = () => {
                 {!isClosed && !isViewer && (
                   <div className="flex items-center justify-between pt-2 border-t border-slate-900">
                     <span className="text-[10px] text-slate-400">
-                      {incident.status === 'Director Sign-off'
+                      {(incident.status as string) === 'Director Sign-off'
                         ? 'Requires Clinical Director (ADMIN) final sign-off to close'
                         : `Advance to next stage: ${WORKFLOW_STEPS[stepIdx + 1]}`}
                     </span>
                     <button
                       onClick={() => handleAdvanceWorkflow(incident)}
                       className={`px-3 py-1 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-sm ${
-                        incident.status === 'Director Sign-off'
+                        (incident.status as string) === 'Director Sign-off'
                           ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
                           : 'bg-teal-600 hover:bg-teal-500 text-white'
                       }`}
                     >
-                      {incident.status === 'Director Sign-off' ? (
+                      {(incident.status as string) === 'Director Sign-off' ? (
                         <>
                           <UserCheck className="w-3.5 h-3.5" />
                           <span>Director Sign-off & Close</span>
@@ -579,6 +595,17 @@ export const IncidentsModule: React.FC = () => {
               
               {/* Action buttons */}
               <div className="flex justify-end gap-2 border-t border-slate-800/80 pt-3 flex-wrap">
+                 {(isHighOrCritical || incident.isNdisReportable) && (
+                   <button
+                     id={`escalate-incident-${incident.id}`}
+                     onClick={() => setSelectedIncidentForEscalation(incident)}
+                     className="px-3 py-1.5 bg-rose-600/30 text-rose-300 hover:bg-rose-600/40 font-bold text-xs rounded-lg flex items-center gap-1.5 border border-rose-500/40 transition-all shadow-sm cursor-pointer"
+                     title="Trigger multi-step statutory escalation and Cloud Function email dispatch"
+                   >
+                     <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+                     <span>Trigger Cloud Escalation</span>
+                   </button>
+                 )}
                  <button
                     id={`print-pdf-${incident.id}`}
                     onClick={() => setSelectedIncidentForPDF(incident)}
@@ -590,7 +617,7 @@ export const IncidentsModule: React.FC = () => {
                   </button>
                  <button
                     onClick={() => setActiveTab('google-workspace')}
-                    className="px-3 py-1.5 bg-rose-600/20 text-rose-300 hover:bg-rose-600/30 font-bold text-xs rounded-lg flex items-center gap-1.5 border border-rose-500/30 transition-all shadow-sm"
+                    className="px-3 py-1.5 bg-slate-800 text-slate-300 hover:text-white font-bold text-xs rounded-lg flex items-center gap-1.5 border border-slate-700 transition-all shadow-sm"
                     title="Notify NDIS Commission and Management via Gmail API"
                   >
                     <Mail className="w-3.5 h-3.5" />
@@ -740,6 +767,15 @@ export const IncidentsModule: React.FC = () => {
         incident={selectedIncidentForPDF}
         client={clients.find((c: Client) => c.id === selectedIncidentForPDF?.clientId)}
       />
+
+      {/* Multi-Step Reportable Incident Escalation & Cloud Function Email Dispatch Modal */}
+      {selectedIncidentForEscalation && (
+        <IncidentEscalationModal
+          incident={selectedIncidentForEscalation}
+          onClose={() => setSelectedIncidentForEscalation(null)}
+          onEscalated={() => setSelectedIncidentForEscalation(null)}
+        />
+      )}
     </div>
   );
 };

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useManagementStore } from '@/stores/useManagementStore';
 import { Client, ClientGoal, CaseNote } from '@/types';
+import { ClinicalNotesPDFExportModal } from './ClinicalNotesPDFExportModal';
 import {
   FileText,
   Plus,
@@ -23,7 +24,9 @@ import {
   ArrowUpRight,
   CheckSquare,
   Square,
-  Trash2
+  Trash2,
+  Printer,
+  FileCheck
 } from 'lucide-react';
 
 type SoapField = 'subjective' | 'objective' | 'assessment' | 'plan';
@@ -51,6 +54,7 @@ export const CaseNotesModule: React.FC = () => {
   const [selectedClient, setSelectedClient] = useState(clients[0]?.id || 'cli-101');
   const [format, setFormat] = useState<'SIMPL' | 'BIRP'>('SIMPL');
   const [autoGenerateClaim, setAutoGenerateClaim] = useState(true);
+  const [isExportPDFOpen, setIsExportPDFOpen] = useState(false);
 
   const selectedClientObj = clients.find((c: Client) => c.id === selectedClient);
 
@@ -452,6 +456,16 @@ ${rawText}`;
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsExportPDFOpen(true)}
+            className="px-3.5 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold text-xs rounded-lg flex items-center gap-2 transition-all shadow-md cursor-pointer"
+            title="Export selected clinical case notes into an NDIS-compliant PDF report"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Export Notes PDF</span>
+          </button>
+
           <button
             type="button"
             onClick={handleAiRefineNote}
@@ -1032,6 +1046,15 @@ ${rawText}`;
           </button>
         </div>
       )}
+
+      {/* Clinical Case Notes Formatted NDIS PDF Export Modal */}
+      <ClinicalNotesPDFExportModal
+        isOpen={isExportPDFOpen}
+        onClose={() => setIsExportPDFOpen(false)}
+        caseNotes={caseNotes}
+        clients={clients}
+        initialClientId={selectedClient}
+      />
     </div>
   );
 };

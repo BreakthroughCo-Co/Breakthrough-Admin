@@ -10,6 +10,7 @@ import { ClientPortalModal } from './ClientPortalModal';
 import { ParticipantOnboardingWizard } from './ParticipantOnboardingWizard';
 import { DatabaseManagerModal } from './DatabaseManagerModal';
 import { NDISActivityFeed } from './NDISActivityFeed';
+import { ClientDashboardWidget } from './ClientDashboardWidget';
 import { computeClientRiskAssessment } from '@/lib/ai-assistant';
 import { RiskAssessment } from '@/types';
 import {
@@ -49,6 +50,7 @@ export const ClientsModule: React.FC = () => {
     restrictivePractices,
     caseNotes,
     billingClaims,
+    crmTasks,
     addClient,
     deleteClient,
     currentUser,
@@ -545,6 +547,9 @@ export const ClientsModule: React.FC = () => {
         <div className="lg:col-span-2">
           {selectedClient ? (
             <div className="space-y-6">
+              {/* Dashboard Widget */}
+              <ClientDashboardWidget client={selectedClient} tasks={crmTasks || []} />
+
               {/* Persistent Key Vitals Summary Card */}
               <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-teal-500/30 rounded-2xl p-5 shadow-lg relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
