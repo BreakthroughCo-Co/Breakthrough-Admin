@@ -34,6 +34,7 @@ import { AuditLogsModule } from '@/components/features/AuditLogsModule';
 import { SecurityAuditModule } from '@/components/features/SecurityAuditModule';
 import { IntegrationsModule } from '@/components/features/IntegrationsModule';
 import { ParticipantPortalView } from '@/components/features/ParticipantPortalView';
+import { AIPredictiveInsights } from '@/components/features/AIPredictiveInsights';
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
 import { OfflineToast } from '@/components/OfflineToast';
 import { BiometricSecurityOverlay } from '@/components/BiometricSecurityOverlay';

@@ -171,7 +171,8 @@ export type TabType =
   | 'audit-logs'
   | 'security-audit'
   | 'integrations'
-  | 'participant-portal';
+  | 'participant-portal'
+  | 'ai-predictive-insights';
 
 export const OFFICIAL_2026_NDIS_PRICE_GUIDE: NDISSupportItem[] = [
   {

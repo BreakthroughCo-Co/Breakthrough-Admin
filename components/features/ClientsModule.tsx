@@ -7,10 +7,12 @@ import { GoalTrackingFeature } from './GoalTrackingFeature';
 import { GoalTracker } from '@/components/GoalTracker';
 import { NDISGoalTracker } from './NDISGoalTracker';
 import { ClientPortalModal } from './ClientPortalModal';
+import { ClientDocumentUpload } from './ClientDocumentUpload';
 import { ParticipantOnboardingWizard } from './ParticipantOnboardingWizard';
 import { DatabaseManagerModal } from './DatabaseManagerModal';
 import { NDISActivityFeed } from './NDISActivityFeed';
 import { ClientDashboardWidget } from './ClientDashboardWidget';
+import { ClientAISummaryPanel } from './ClientAISummaryPanel';
 import { computeClientRiskAssessment } from '@/lib/ai-assistant';
 import { RiskAssessment } from '@/types';
 import {
@@ -74,8 +76,6 @@ export const ClientsModule: React.FC = () => {
     }
     return clients[0] || null;
   });
-  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
-  const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [isClientPortalOpen, setIsClientPortalOpen] = useState(false);
 
   // Compute live risk assessment for all clients
@@ -168,28 +168,6 @@ export const ClientsModule: React.FC = () => {
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
   }, [selectedClient]);
 
-  const handleGenerateSummary = async () => {
-    if (!selectedClient) return;
-    setIsGeneratingSummary(true);
-    setAiSummary(null);
-    try {
-      const response = await fetch('/api/gemini/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: `Generate a concise, NDIS-compliant clinical progress summary for participant ${selectedClient.name} (NDIS: ${selectedClient.ndisNumber}, Disability: ${selectedClient.primaryDisability}). Synthesize hypothetical recent case notes and behavior reports into a 3-paragraph summary covering: 1. Current Status 2. Progress towards goals 3. Recommendations.`,
-          model: 'gemini-3.1-pro-preview'
-        }),
-      });
-      const data = await response.json();
-      setAiSummary(data.text);
-    } catch (err) {
-      console.error(err);
-      setAiSummary("Failed to generate AI Summary.");
-    } finally {
-      setIsGeneratingSummary(false);
-    }
-  };
   const [isAddingClient, setIsAddingClient] = useState(false);
 
   const [newClient, setNewClient] = useState({
@@ -550,6 +528,9 @@ export const ClientsModule: React.FC = () => {
               {/* Dashboard Widget */}
               <ClientDashboardWidget client={selectedClient} tasks={crmTasks || []} />
 
+              {/* Document Upload Widget */}
+              <ClientDocumentUpload client={selectedClient} />
+
               {/* Persistent Key Vitals Summary Card */}
               <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-teal-500/30 rounded-2xl p-5 shadow-lg relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
@@ -604,14 +585,6 @@ export const ClientsModule: React.FC = () => {
                     >
                       <Share2 className="w-3.5 h-3.5" />
                       <span>Portal</span>
-                    </button>
-                    <button
-                      onClick={handleGenerateSummary}
-                      disabled={isGeneratingSummary}
-                      className="px-3 py-1.5 bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600/30 font-bold text-xs rounded-lg flex items-center gap-1.5 border border-indigo-500/30 transition-all disabled:opacity-50"
-                    >
-                      <BrainCircuit className="w-3.5 h-3.5" />
-                      <span>{isGeneratingSummary ? 'Synthesizing...' : 'AI Summary'}</span>
                     </button>
 
                     {isAdmin && (
@@ -732,18 +705,8 @@ export const ClientsModule: React.FC = () => {
                   </div>
                 </div>
 
-                {/* AI Summary Box if Generated */}
-                {aiSummary && (
-                  <div className="mt-4 p-3.5 bg-indigo-950/40 rounded-xl border border-indigo-500/30 space-y-1.5 text-xs">
-                    <div className="flex items-center gap-2 text-indigo-300 font-bold">
-                      <BrainCircuit className="w-4 h-4 text-indigo-400" />
-                      AI Synthesized Clinical Progress Update
-                    </div>
-                    <div className="text-slate-300 leading-relaxed space-y-2 whitespace-pre-wrap text-[11px]">
-                      {aiSummary}
-                    </div>
-                  </div>
-                )}
+                {/* AI Summary Panel */}
+                <ClientAISummaryPanel client={selectedClient} />
               </div>
 
               {/* Chronological NDIS Activity & Delivery Feed */}

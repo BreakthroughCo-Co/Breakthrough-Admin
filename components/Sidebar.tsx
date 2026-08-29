@@ -83,6 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         { id: 'google-workspace', label: 'Google Workspace Hub', icon: Globe, highlight: true, badge: 'OAUTH' },
         { id: 'google-classroom', label: 'Google Classroom', icon: GraduationCap, highlight: true, badge: 'ACADEMY' },
         { id: 'google-keep', label: 'Google Keep Notes', icon: StickyNote, highlight: true, badge: 'KEEP' },
+        { id: 'ai-predictive-insights', label: 'AI Predictive Insights', icon: BrainCircuit, badge: 'AI' },
         { id: 'audit', label: 'Compliance Dashboard', icon: Award, highlight: true },
         { id: 'crm', label: 'Intake & CRM Leads', icon: UserPlus },
         { id: 'billing', label: 'NDIS Billing Claims', icon: Receipt },

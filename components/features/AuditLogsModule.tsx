@@ -25,10 +25,28 @@ export const AuditLogsModule: React.FC = () => {
   const [endDate, setEndDate] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [isComplianceReportOpen, setIsComplianceReportOpen] = useState(false);
+  const [isMasked, setIsMasked] = useState(true);
 
   const modules = ['ALL', 'CLIENT', 'BILLING', 'INCIDENT', 'PRACTITIONER', 'SYSTEM'];
   const severities = ['ALL', 'Critical', 'High', 'Medium', 'Low'];
   const roles = ['ALL', 'ADMIN', 'PRACTITIONER', 'VIEWER'];
+
+  // Utility to mask sensitive details (Emails, IPs, Phone Numbers)
+  const maskSensitiveData = (text: string | undefined): string => {
+    if (!text) return '';
+    let maskedText = text;
+    // Mask Email (e.g. user@example.com -> u***@e***.com)
+    maskedText = maskedText.replace(/([a-zA-Z0-9._-]+)@([a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi, (match, p1, p2) => {
+      const p1Masked = p1.charAt(0) + '***';
+      const p2Masked = p2.charAt(0) + '***' + (p2.includes('.') ? p2.substring(p2.indexOf('.')) : '');
+      return `${p1Masked}@${p2Masked}`;
+    });
+    // Mask IPv4
+    maskedText = maskedText.replace(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, '***.***.***.***');
+    // Mask AU Phone numbers
+    maskedText = maskedText.replace(/(?:\+?61|0)[2-478](?:[ -]?\d){8}\b/g, '[REDACTED PHONE]');
+    return maskedText;
+  };
 
   const setDatePreset = (preset: 'today' | '7d' | '30d' | 'thisMonth' | 'all') => {
     const today = new Date();
@@ -140,10 +158,14 @@ export const AuditLogsModule: React.FC = () => {
     ];
     const rows = filteredLogs.map((l: AuditLog) => {
       const sev = getAuditSeverity(l);
-      const cleanDetails = (l.details || '').replace(/"/g, '""');
+      const displayedDetails = isMasked ? maskSensitiveData(l.details) : l.details;
+      const displayedActor = isMasked ? maskSensitiveData(l.actorName) : l.actorName;
+      const displayedIp = isMasked ? maskSensitiveData(l.ipAddress) : l.ipAddress;
+      
+      const cleanDetails = (displayedDetails || '').replace(/"/g, '""');
       const cleanAction = (l.action || '').replace(/"/g, '""');
-      const cleanActor = (l.actorName || '').replace(/"/g, '""');
-      return `"${l.id}","${l.timestamp}","${sev}","${cleanAction}","${cleanActor}","${l.actorRole}","${l.entity || ''}","${cleanDetails}","${l.ipAddress || ''}"`;
+      const cleanActor = (displayedActor || '').replace(/"/g, '""');
+      return `"${l.id}","${l.timestamp}","${sev}","${cleanAction}","${cleanActor}","${l.actorRole}","${l.entity || ''}","${cleanDetails}","${displayedIp || ''}"`;
     });
 
     const csvContent = [headers.join(','), ...rows].join('\n');
@@ -205,6 +227,9 @@ export const AuditLogsModule: React.FC = () => {
               ${filteredLogs
                 .map((l: AuditLog) => {
                   const sev = getAuditSeverity(l);
+                  const displayedActor = isMasked ? maskSensitiveData(l.actorName) : l.actorName;
+                  const displayedDetails = isMasked ? maskSensitiveData(l.details) : l.details;
+                  
                   const badgeClass =
                     sev === 'Critical'
                       ? 'badge-critical'
@@ -222,10 +247,10 @@ export const AuditLogsModule: React.FC = () => {
                       ${l.entity ? `<div style="color: #64748b; font-size: 10px;">${l.entity}</div>` : ''}
                     </td>
                     <td>
-                      <div><strong>${l.actorName}</strong></div>
+                      <div><strong>${displayedActor}</strong></div>
                       <div style="font-size: 10px; color: #64748b;">${l.actorRole}</div>
                     </td>
-                    <td>${l.details}</td>
+                    <td>${displayedDetails}</td>
                   </tr>
                 `;
                 })
@@ -262,8 +287,11 @@ Generated On: ${new Date().toISOString()}
 RECORDED AUDIT LOGS:
 ${filteredLogs
   .map(
-    (l: AuditLog) =>
-      `[${l.timestamp}] | SEVERITY: ${getAuditSeverity(l)} | ACTION: ${l.action} | ACTOR: ${l.actorName} (${l.actorRole}) | DETAILS: ${l.details}`
+    (l: AuditLog) => {
+      const displayedActor = isMasked ? maskSensitiveData(l.actorName) : l.actorName;
+      const displayedDetails = isMasked ? maskSensitiveData(l.details) : l.details;
+      return `[${l.timestamp}] | SEVERITY: ${getAuditSeverity(l)} | ACTION: ${l.action} | ACTOR: ${displayedActor} (${l.actorRole}) | DETAILS: ${displayedDetails}`;
+    }
   )
   .join('\n')}
 
@@ -544,6 +572,18 @@ recorded above have been preserved in an immutable audit ledger compliant with t
                 <span>Reset Filters</span>
               </button>
             )}
+
+            <div className="flex items-center gap-2 ml-auto">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 cursor-pointer hover:text-slate-200 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={isMasked}
+                  onChange={(e) => setIsMasked(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded border-slate-700 text-teal-500 bg-slate-900 focus:ring-teal-500/50 focus:ring-offset-slate-950"
+                />
+                Mask Sensitive Data
+              </label>
+            </div>
           </div>
         </div>
       </div>
@@ -571,6 +611,8 @@ recorded above have been preserved in an immutable audit ledger compliant with t
               ) : (
                 filteredLogs.map((log: AuditLog) => {
                   const severity = getAuditSeverity(log);
+                  const displayedActor = isMasked ? maskSensitiveData(log.actorName) : log.actorName;
+                  const displayedDetails = isMasked ? maskSensitiveData(log.details) : log.details;
                   return (
                     <tr key={log.id} className="hover:bg-slate-800/40 transition-colors">
                       <td className="py-3 px-4 text-slate-400 text-[11px] whitespace-nowrap">
@@ -584,11 +626,11 @@ recorded above have been preserved in an immutable audit ledger compliant with t
                       </td>
                       <td className="py-3 px-4 font-bold text-teal-300 whitespace-nowrap">{log.action}</td>
                       <td className="py-3 px-4 font-sans whitespace-nowrap">
-                        <span className="text-white font-semibold">{log.actorName}</span>{' '}
+                        <span className="text-white font-semibold">{displayedActor}</span>{' '}
                         <span className="text-[10px] text-slate-400">({log.actorRole})</span>
                       </td>
-                      <td className="py-3 px-4 text-slate-300 max-w-md truncate font-sans text-xs">
-                        {log.details}
+                      <td className="py-3 px-4 text-slate-300 max-w-md truncate font-sans text-xs" title={displayedDetails}>
+                        {displayedDetails}
                       </td>
                     </tr>
                   );

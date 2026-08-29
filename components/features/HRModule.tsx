@@ -6,6 +6,7 @@ import { Practitioner, Client } from '@/types';
 import { StaffAvailabilityHeatmap } from './StaffAvailabilityHeatmap';
 import { StaffingGapAutoScheduler, ScheduledShift } from './StaffingGapAutoScheduler';
 import { StaffTimelineD3View, ShiftAppointment } from './StaffTimelineD3View';
+import { DragDropRosterCalendar } from './DragDropRosterCalendar';
 import {
   UserCheck,
   ShieldCheck,
@@ -34,7 +35,7 @@ export const HRModule: React.FC = () => {
   const isViewer = currentUser?.role === 'VIEWER';
   
   // HR Module Sub-View Switcher
-  const [activeHRView, setActiveHRView] = useState<'D3_TIMELINE' | 'HEATMAP' | 'AUTO_SCHEDULER' | 'PREFLIGHT_CONFLICT' | 'STAFF_PROFILES'>('D3_TIMELINE');
+  const [activeHRView, setActiveHRView] = useState<'D3_TIMELINE' | 'HEATMAP' | 'AUTO_SCHEDULER' | 'PREFLIGHT_CONFLICT' | 'STAFF_PROFILES' | 'DRAG_DROP_CALENDAR'>('D3_TIMELINE');
   const [selectedClientForRostering, setSelectedClientForRostering] = useState(clients[0]?.id || 'cli-101');
   const [isSendingReminders, setIsSendingReminders] = useState(false);
   const [reminderSentStatus, setReminderSentStatus] = useState<string | null>(null);
@@ -393,6 +394,19 @@ export const HRModule: React.FC = () => {
 
         <button
           type="button"
+          onClick={() => setActiveHRView('DRAG_DROP_CALENDAR')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border whitespace-nowrap ${
+            activeHRView === 'DRAG_DROP_CALENDAR'
+              ? 'bg-blue-500/10 text-blue-300 border-blue-500/30 shadow-sm'
+              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+          }`}
+        >
+          <Calendar className="w-4 h-4 text-blue-400" />
+          <span>Drag & Drop Roster</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveHRView('HEATMAP')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border whitespace-nowrap ${
             activeHRView === 'HEATMAP'
@@ -443,6 +457,10 @@ export const HRModule: React.FC = () => {
           <span>Staff Credentials ({practitioners.length})</span>
         </button>
       </div>
+
+      {activeHRView === 'DRAG_DROP_CALENDAR' && (
+        <DragDropRosterCalendar />
+      )}
 
       {/* VIEW 1: D3.js High-Density Timeline (Primary 'Shift View' Calendar Interface) */}
       {activeHRView === 'D3_TIMELINE' && (

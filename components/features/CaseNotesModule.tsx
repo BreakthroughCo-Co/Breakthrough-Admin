@@ -29,6 +29,9 @@ import {
   FileCheck
 } from 'lucide-react';
 
+import { GoalProgressChart } from './GoalProgressChart';
+import { SignaturePad } from './SignaturePad';
+
 type SoapField = 'subjective' | 'objective' | 'assessment' | 'plan';
 type DictationMode = 'FIELD' | 'FULL_STREAM';
 
@@ -54,6 +57,7 @@ export const CaseNotesModule: React.FC = () => {
   const [selectedClient, setSelectedClient] = useState(clients[0]?.id || 'cli-101');
   const [format, setFormat] = useState<'SIMPL' | 'BIRP'>('SIMPL');
   const [autoGenerateClaim, setAutoGenerateClaim] = useState(true);
+  const [signatureData, setSignatureData] = useState<string | null>(null);
   const [isExportPDFOpen, setIsExportPDFOpen] = useState(false);
 
   const selectedClientObj = clients.find((c: Client) => c.id === selectedClient);
@@ -935,6 +939,9 @@ ${rawText}`;
             <span className="text-[10px] text-teal-400 font-mono font-bold">$214.41/hr</span>
           </div>
 
+          {/* Touch-Friendly Signature Field */}
+          <SignaturePad onSignatureChange={setSignatureData} />
+
           {isViewer ? (
             <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 text-center text-xs text-slate-500 font-medium">
               Clinical case note creation is disabled for VIEWER role (Read-Only Access)
@@ -950,12 +957,18 @@ ${rawText}`;
           )}
         </form>
 
-        {/* Recent Signed Notes */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-sm">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Clock className="w-4 h-4 text-teal-400" />
-            Recent Signed Clinical Trail
-          </h3>
+        {/* Right Column: Goal Chart & Recent Signed Notes */}
+        <div className="flex flex-col gap-6">
+          {selectedClientObj?.goals && selectedClientObj.goals.length > 0 && (
+            <GoalProgressChart goals={selectedClientObj.goals} />
+          )}
+
+          {/* Recent Signed Notes */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-sm flex-1">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Clock className="w-4 h-4 text-teal-400" />
+              Recent Signed Clinical Trail
+            </h3>
 
           <div className="space-y-3">
             {caseNotes.map((note: CaseNote) => (
@@ -1016,6 +1029,7 @@ ${rawText}`;
               </div>
             ))}
           </div>
+        </div>
         </div>
       </div>
 

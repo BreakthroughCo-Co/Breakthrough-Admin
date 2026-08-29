@@ -8,6 +8,7 @@ import { XeroOAuthService } from '@/lib/xeroService';
 import { NDISPricingSyncEngine } from '@/lib/ndisPricingService';
 import { ProdaBatchModal } from './ProdaBatchModal';
 import { FinancialControl } from './FinancialControl';
+import { BillingInsightsPanel } from './BillingInsightsPanel';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -1096,6 +1097,9 @@ export const BillingModule: React.FC = () => {
           <span>Funding Burn Rate & Trajectory Analytics</span>
         </button>
       </div>
+
+      {/* Global Billing Insights Panel */}
+      <BillingInsightsPanel />
 
       {/* TAB 0: FINANCIAL CONTROL & PACE ANALYTICS */}
       {activeTab === 'FINANCIAL_CONTROL' && (

@@ -44,7 +44,8 @@ const MODULE_TITLES: Record<TabType, string> = {
   'security-audit': 'Enterprise Security Audit & Privilege Matrix',
   'integrations': 'Cloud Integrations & Synchronization Health',
   'google-classroom': 'Workforce Training & Competency Modules',
-  'participant-portal': 'NDIS Participant Portal & Care Plan Summary'
+  'participant-portal': 'NDIS Participant Portal & Care Plan Summary',
+  'ai-predictive-insights': 'AI Predictive Insights & Clinical Intelligence'
 };
 
 export const ModuleExportModal: React.FC<ModuleExportModalProps> = ({

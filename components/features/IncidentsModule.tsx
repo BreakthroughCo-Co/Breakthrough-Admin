@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useManagementStore } from '@/stores/useManagementStore';
 import { MonthlyIncidentTrendReport } from './MonthlyIncidentTrendReport';
+import { IncidentRiskHeatmap } from './IncidentRiskHeatmap';
 import {
   AlertTriangle,
   Plus,
@@ -420,6 +421,9 @@ export const IncidentsModule: React.FC = () => {
 
       {/* Monthly Incident Trend Report & High-Frequency Analytics (recharts) */}
       <MonthlyIncidentTrendReport />
+
+      {/* Incident Risk Heatmap */}
+      <IncidentRiskHeatmap />
 
       {/* Incidents List */}
       <div className="space-y-3">
