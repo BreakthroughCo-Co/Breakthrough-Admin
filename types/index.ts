@@ -200,9 +200,13 @@ export interface Incident {
   practitionerId?: string;
   practitionerName?: string;
   incidentDate: string;
+  date?: string;
+  title?: string;
+  category?: IncidentCategory | string;
   incidentTime?: string;
   reportedDate?: string;
   reportedByRole?: string;
+  reportedByName?: string;
   severity: 'Low' | 'Medium' | 'High' | 'Critical / Reportable';
   status: 'Investigating' | 'Under Investigation' | 'Reported to NDIS Commission' | 'Closed' | 'Corrective Action Required' | 'Resolved' | 'Open';
   type?: string;
@@ -401,7 +405,7 @@ export interface AppNotification {
   id: string;
   title: string;
   message: string;
-  type: 'incident' | 'agreement' | 'hr' | 'compliance' | 'client' | 'billing' | 'clinical' | 'general' | 'system';
+  type: 'incident' | 'agreement' | 'hr' | 'compliance' | 'client' | 'billing' | 'clinical' | 'general' | 'system' | 'crm';
   severity: 'high' | 'medium' | 'info' | 'low' | 'success';
   timestamp: string;
   read: boolean;
@@ -437,12 +441,14 @@ export interface CRMTask {
 export interface ScheduledShift {
   id: string;
   practitionerId: string;
+  practitionerName?: string;
   clientId: string;
   clientName: string;
   date: string;
   startTime: string;
   endTime: string;
   supportType: string;
+  googleCalendarEventId?: string;
 }
 
 export interface KeepChecklistItem {

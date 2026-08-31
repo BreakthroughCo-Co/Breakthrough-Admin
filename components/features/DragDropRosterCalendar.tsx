@@ -19,7 +19,7 @@ export const DragDropRosterCalendar: React.FC = () => {
 
   const [shifts, setShifts] = useState<ScheduledShift[]>([
     // Dummy shifts for demonstration
-    { id: 'shift-1', clientId: 'cli-101', clientName: 'James Wilson', practitionerId: 'prac-201', practitionerName: 'Dr. Sarah Jenkins', date: currentWeekStart.toISOString().slice(0, 10), startTime: '09:00', endTime: '11:00', type: 'Core Support' }
+    { id: 'shift-1', clientId: 'cli-101', clientName: 'James Wilson', practitionerId: 'prac-201', practitionerName: 'Dr. Sarah Jenkins', date: currentWeekStart.toISOString().slice(0, 10), startTime: '09:00', endTime: '11:00', supportType: 'Core Support' }
   ]);
 
   const [draggedItem, setDraggedItem] = useState<{ type: 'client' | 'shift'; id: string; sourcePractitioner?: string; sourceDate?: string } | null>(null);
@@ -62,7 +62,7 @@ export const DragDropRosterCalendar: React.FC = () => {
     if (existingShifts.length >= 3) {
       const msg = `Assignment blocked: Practitioner max daily capacity exceeded on ${targetDateStr}.`;
       setConflictError(msg);
-      addNotification({ title: 'Scheduling Conflict', message: msg, type: 'error', severity: 'high' });
+      addNotification({ title: 'Scheduling Conflict', message: msg, type: 'hr', severity: 'high' });
       return;
     }
 
@@ -80,7 +80,7 @@ export const DragDropRosterCalendar: React.FC = () => {
         date: targetDateStr,
         startTime: '09:00',
         endTime: '11:00',
-        type: 'Core Support'
+        supportType: 'Core Support'
       };
       
       setShifts([...shifts, newShift]);

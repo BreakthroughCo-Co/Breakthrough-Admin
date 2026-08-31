@@ -25,7 +25,7 @@ export const IncidentRiskHeatmap: React.FC = () => {
       const clientRisk = client?.riskLevel === 'High' ? 'High (Complex)' : 
                          client?.riskLevel === 'Medium' ? 'Medium (Standard)' : 'Low (Basic)';
       
-      const sev = inc.severity === 'Critical (Reportable)' ? 'Critical (Reportable)' :
+      const sev = inc.severity === 'Critical / Reportable' ? 'Critical (Reportable)' :
                   inc.severity === 'High' ? 'High' :
                   inc.severity === 'Medium' ? 'Medium' : 'Low';
                   

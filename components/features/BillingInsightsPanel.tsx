@@ -15,7 +15,7 @@ export const BillingInsightsPanel: React.FC = () => {
     billingClaims.forEach(claim => {
       totalValue += claim.totalAmount;
       if (claim.status === 'Approved' || claim.status === 'Paid') approved++;
-      else if (claim.status === 'Rejected' || claim.status === 'Failed') rejected++;
+      else if (claim.status === 'Rejected' || claim.reconciliationStatus === 'Failed') rejected++;
       else pending++;
     });
 
@@ -30,15 +30,10 @@ export const BillingInsightsPanel: React.FC = () => {
     let total = 0;
     let used = 0;
     clients.forEach(c => {
-      if (c.budgetSummary) {
-        total += c.budgetSummary.totalFunding;
-        used += c.budgetSummary.usedFunding;
-      } else if (c.budgetOverview) {
-        total += c.budgetOverview.totalBudget;
-        used += c.budgetOverview.spentBudget;
-      }
+      total += c.totalBudget || 0;
+      used += c.spentBudget || 0;
     });
-    return { total, used, remaining: total - used, percentage: total > 0 ? (used / total) * 100 : 0 };
+    return { total, used, remaining: Math.max(0, total - used), percentage: total > 0 ? (used / total) * 100 : 0 };
   }, [clients]);
 
   const fundingData = [

@@ -105,8 +105,9 @@ export const RecentActivityFeed: React.FC = () => {
     // 2. Incidents & Hazards
     incidents.forEach((inc) => {
       const pName = clientMap.get(inc.clientId) || inc.clientName || 'Participant';
-      const dateVal = inc.date ? new Date(inc.date).getTime() : Date.now() - 7200000;
-      const isCritical = inc.severity === 'Critical / Reportable' || inc.severity === 'Critical';
+      const rawDateStr = inc.incidentDate || inc.date || '';
+      const dateVal = rawDateStr ? new Date(rawDateStr).getTime() : Date.now() - 7200000;
+      const isCritical = inc.severity === 'Critical / Reportable';
       list.push({
         id: `inc-${inc.id}`,
         category: 'INCIDENT',
@@ -115,12 +116,12 @@ export const RecentActivityFeed: React.FC = () => {
         categoryBg: isCritical ? 'bg-rose-500/10' : 'bg-amber-500/10',
         categoryBorder: isCritical ? 'border-rose-500/20' : 'border-amber-500/20',
         icon: ShieldAlert,
-        title: `Incident: ${inc.title || inc.category}`,
+        title: `Incident: ${inc.title || inc.category || 'Clinical Incident'}`,
         summary: inc.description || 'Incident report logged with NDIS Commission notification review.',
-        actor: inc.reportedByName || 'Staff Member',
+        actor: inc.reportedByName || inc.reportedBy || 'Staff Member',
         participantName: pName,
         clientId: inc.clientId,
-        timestamp: inc.date || new Date().toISOString().slice(0, 10),
+        timestamp: rawDateStr || new Date().toISOString().slice(0, 10),
         rawDate: isNaN(dateVal) ? Date.now() : dateVal,
         statusBadge: `${inc.severity} • ${inc.status}`,
         statusBadgeColor: isCritical

@@ -260,6 +260,8 @@ export default function Page() {
         );
       case 'participant-portal':
         return <ParticipantPortalView />;
+      case 'ai-predictive-insights':
+        return <AIPredictiveInsights />;
       default:
         if (currentUser?.role === 'PARTICIPANT') {
           return <ParticipantPortalView />;
