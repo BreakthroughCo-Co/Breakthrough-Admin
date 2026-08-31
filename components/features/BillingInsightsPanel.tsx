@@ -15,7 +15,7 @@ export const BillingInsightsPanel: React.FC = () => {
     billingClaims.forEach(claim => {
       totalValue += claim.totalAmount;
       if (claim.status === 'Approved' || claim.status === 'Paid') approved++;
-      else if (claim.status === 'Rejected' || claim.status === 'Failed') rejected++;
+      else if (claim.status === 'Rejected' || claim.reconciliationStatus === 'Failed') rejected++;
       else pending++;
     });
 

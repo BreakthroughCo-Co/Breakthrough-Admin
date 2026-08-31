@@ -13,6 +13,7 @@ import { DatabaseManagerModal } from './DatabaseManagerModal';
 import { NDISActivityFeed } from './NDISActivityFeed';
 import { ClientDashboardWidget } from './ClientDashboardWidget';
 import { ClientAISummaryPanel } from './ClientAISummaryPanel';
+import { ClinicalReportGeneratorModal } from './ClinicalReportGeneratorModal';
 import { computeClientRiskAssessment } from '@/lib/ai-assistant';
 import { RiskAssessment } from '@/types';
 import {
@@ -68,6 +69,7 @@ export const ClientsModule: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isIntakeWizardOpen, setIsIntakeWizardOpen] = useState(false);
   const [isDatabaseManagerOpen, setIsDatabaseManagerOpen] = useState(false);
+  const [isClinicalReportOpen, setIsClinicalReportOpen] = useState(false);
   const [isRiskRationaleOpen, setIsRiskRationaleOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(() => {
     if (selectedClientId) {
@@ -272,6 +274,15 @@ export const ClientsModule: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setIsClinicalReportOpen(true)}
+            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-teal-300 hover:text-white font-semibold text-xs rounded-lg flex items-center gap-2 transition-all border border-teal-500/30 shadow-sm"
+            title="Compile PDF-ready summary of AI insights, active goals, and incidents for client review meetings"
+          >
+            <FileText className="w-3.5 h-3.5 text-teal-400" />
+            <span>Clinical Report Generator</span>
+          </button>
+
           {isAdmin && (
             <button
               onClick={() => setIsDatabaseManagerOpen(true)}
@@ -572,6 +583,15 @@ export const ClientsModule: React.FC = () => {
 
                   <div className="flex items-center gap-2 flex-wrap">
                     <button
+                      onClick={() => setIsClinicalReportOpen(true)}
+                      className="px-3 py-1.5 bg-gradient-to-r from-teal-700 to-teal-600 hover:from-teal-600 hover:to-teal-500 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all shadow-sm border border-teal-400/30"
+                      title="Generate NDIS Clinical Progress & Review PDF Report"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>Review Report (PDF)</span>
+                    </button>
+
+                    <button
                       onClick={() => setActiveTab('google-maps')}
                       className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-teal-300 font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all border border-slate-700"
                       title="Google Maps Location & Route"
@@ -755,6 +775,13 @@ export const ClientsModule: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Clinical Review Report Generator Modal */}
+      <ClinicalReportGeneratorModal
+        isOpen={isClinicalReportOpen}
+        onClose={() => setIsClinicalReportOpen(false)}
+        defaultClientId={selectedClient?.id}
+      />
 
       {/* 7-Step Guided Questionnaire Intake Wizard */}
       <ParticipantOnboardingWizard

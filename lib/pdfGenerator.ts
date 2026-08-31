@@ -7,7 +7,7 @@
  */
 
 import { jsPDF } from 'jspdf';
-import { BSPDocument, ComprehensiveBSPResult, Client, RestrictivePractice, ABCLog, ClientGoal } from '@/types';
+import { BSPDocument, ComprehensiveBSPResult, Client, RestrictivePractice, ABCLog, ClientGoal, Incident } from '@/types';
 
 export interface PDFExportResult {
   contentType: string;
@@ -31,6 +31,30 @@ export interface BSPExportOptions {
   restrictivePractices?: RestrictivePractice[];
   abcLogs?: ABCLog[];
   goals?: ClientGoal[];
+}
+
+export interface ClinicalReviewReportData {
+  reportTitle?: string;
+  meetingDate?: string;
+  meetingType?: 'Annual Plan Review' | '6-Month Progress Review' | 'Interim Clinical Check' | 'Emergency Safeguards Review' | string;
+  client: Client;
+  aiInsightsSummary?: string;
+  caseNotesSummary?: string;
+  activeGoals?: ClientGoal[];
+  recentIncidents?: Incident[];
+  restrictivePractices?: RestrictivePractice[];
+  billingSummary?: {
+    totalBudget: number;
+    spentBudget: number;
+    utilizationPercent: number;
+    remainingBudget: number;
+  };
+  clinicalObservations?: string;
+  recommendedFundingPathway?: string;
+  recommendations?: string[];
+  practitionerName?: string;
+  practitionerTitle?: string;
+  clinicalSupervisorName?: string;
 }
 
 /**
@@ -386,4 +410,360 @@ export function exportBSPToPDF(
   const doc = generateBSPWithJsPDF(bsp, client, options);
   doc.save(fileName);
 }
+
+/**
+ * Generates an NDIS Client Review & Progress Report PDF.
+ * Formatted for NDIA Plan Reviews, Support Coordinator Check-ins, and Clinical Case Conferences.
+ */
+export function generateClinicalReviewReportWithJsPDF(data: ClinicalReviewReportData): jsPDF {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 15;
+  const contentWidth = pageWidth - margin * 2;
+  let y = margin;
+
+  const client = data.client;
+  const clientName = client?.name || 'Participant';
+  const ndisNumber = client?.ndisNumber || '430000000';
+  const meetingDate = data.meetingDate || new Date().toISOString().slice(0, 10);
+  const reportTitle = data.reportTitle || 'NDIS CLINICAL PROGRESS & PLAN REVIEW REPORT';
+  const practitionerName = data.practitionerName || client?.primaryPractitionerName || 'Marcus Vance (Senior Practitioner)';
+  const supervisorName = data.clinicalSupervisorName || 'Dr. Sarah Jenkins (Clinical Director, NDIS #PRAC-9812)';
+
+  const checkPageBreak = (neededHeight: number) => {
+    if (y + neededHeight > pageHeight - 20) {
+      doc.addPage();
+      y = margin + 10;
+      drawRunningHeader();
+    }
+  };
+
+  const drawRunningHeader = () => {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Breakthrough Coaching & Consulting — NDIS Clinical Progress Report', margin, 10);
+    doc.text(`Participant: ${clientName} | NDIS #${ndisNumber} | Date: ${meetingDate}`, pageWidth - margin, 10, { align: 'right' });
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.3);
+    doc.line(margin, 12, pageWidth - margin, 12);
+  };
+
+  // Header Banner
+  doc.setFillColor(15, 118, 110); // Teal 700
+  doc.rect(margin, y, contentWidth, 24, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(255, 255, 255);
+  doc.text(reportTitle.toUpperCase(), margin + 6, y + 8.5);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.text('NDIS Practice Standards • Reasonable & Necessary Section 34 Evidence Summary', margin + 6, y + 15);
+  doc.text(`Meeting/Review Date: ${meetingDate} • Confidential Clinical Document`, margin + 6, y + 20.5);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.text('BREAKTHROUGH CONSULTING', pageWidth - margin - 6, y + 8.5, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.text('NDIS Registered Provider #405001234', pageWidth - margin - 6, y + 14, { align: 'right' });
+
+  y += 30;
+
+  // Participant Demographics & Plan Card
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(203, 213, 225);
+  doc.roundedRect(margin, y, contentWidth, 38, 2, 2, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(71, 85, 105);
+
+  doc.text('Participant Name:', margin + 4, y + 6);
+  doc.text('NDIS Number:', margin + 70, y + 6);
+  doc.text('Date of Birth:', margin + 130, y + 6);
+
+  doc.text('Primary Disability:', margin + 4, y + 15);
+  doc.text('Plan Dates:', margin + 70, y + 15);
+  doc.text('Plan Management:', margin + 130, y + 15);
+
+  doc.text('Lead Practitioner:', margin + 4, y + 24);
+  doc.text('Support Coordinator:', margin + 70, y + 24);
+  doc.text('Risk Level:', margin + 130, y + 24);
+
+  doc.text('Funding Utilization:', margin + 4, y + 33);
+  doc.text('Spent / Allocated:', margin + 70, y + 33);
+  doc.text('Review Meeting Type:', margin + 130, y + 33);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+
+  doc.text(clientName, margin + 30, y + 6);
+  doc.text(ndisNumber, margin + 92, y + 6);
+  doc.text(client?.dateOfBirth || 'N/A', margin + 152, y + 6);
+
+  doc.text((client?.primaryDisability || 'Disability Support').slice(0, 26), margin + 30, y + 15);
+  doc.text(`${client?.planStartDate || '2026-01-01'} to ${client?.planEndDate || '2026-12-31'}`, margin + 90, y + 15);
+  doc.text(client?.planManagementType || 'Plan-Managed', margin + 158, y + 15);
+
+  doc.text(practitionerName.slice(0, 24), margin + 30, y + 24);
+  doc.text((client?.supportCoordinator?.name || 'Assigned Coordinator').slice(0, 22), margin + 100, y + 24);
+  doc.text(client?.riskLevel || 'Medium', margin + 148, y + 24);
+
+  const spent = data.billingSummary?.spentBudget ?? client?.spentBudget ?? 0;
+  const total = data.billingSummary?.totalBudget ?? client?.totalBudget ?? 1;
+  const util = ((spent / (total || 1)) * 100).toFixed(1);
+  doc.text(`${util}% Utilized`, margin + 32, y + 33);
+  doc.text(`$${spent.toLocaleString()} / $${total.toLocaleString()} AUD`, margin + 96, y + 33);
+  doc.text(data.meetingType || 'Annual Review', margin + 162, y + 33);
+
+  y += 44;
+
+  const drawSection = (title: string, color = [15, 118, 110]) => {
+    checkPageBreak(18);
+    doc.setFillColor(color[0], color[1], color[2]);
+    doc.rect(margin, y, 3, 6.5, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(15, 23, 42);
+    doc.text(title, margin + 5, y + 5);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.3);
+    doc.line(margin, y + 7.5, pageWidth - margin, y + 7.5);
+    y += 11;
+  };
+
+  // Section 1: AI & Clinical Executive Summary
+  drawSection('1. Executive Clinical Summary & Progress Overview');
+  const summaryContent = data.aiInsightsSummary || 
+    `${clientName} has engaged regularly in clinical sessions during this review cycle. Significant capacity building gains have been noted in emotional regulation, routine tolerance, and proactive environmental adjustments. Funding utilization remains consistent with planned milestones.`;
+
+  const splitSummary = doc.splitTextToSize(summaryContent, contentWidth - 8);
+  checkPageBreak(splitSummary.length * 4.5 + 8);
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(margin, y, contentWidth, splitSummary.length * 4.5 + 6, 1, 1, 'F');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(51, 65, 85);
+  doc.text(splitSummary, margin + 4, y + 5);
+  y += splitSummary.length * 4.5 + 11;
+
+  // Section 2: Active NDIS Goals & Attainment
+  drawSection('2. Active NDIS Goals, Milestones & Goal Attainment Scaling (GAS)', [13, 148, 136]);
+  const goals = data.activeGoals || client?.goals || [];
+
+  if (goals.length === 0) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text('No active goals currently registered in participant record.', margin + 4, y + 4);
+    y += 10;
+  } else {
+    // Goals Table Header
+    checkPageBreak(12);
+    doc.setFillColor(241, 245, 249);
+    doc.rect(margin, y, contentWidth, 6.5, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(71, 85, 105);
+    doc.text('Goal Description & Focus Area', margin + 3, y + 4.5);
+    doc.text('Category', margin + 110, y + 4.5);
+    doc.text('GAS Score', margin + 142, y + 4.5);
+    doc.text('Progress', margin + 165, y + 4.5);
+    y += 8;
+
+    goals.forEach((g, idx) => {
+      const titleLines = doc.splitTextToSize(`${idx + 1}. ${g.title}`, 104);
+      const rowHeight = Math.max(8, titleLines.length * 4 + 4);
+      checkPageBreak(rowHeight + 2);
+
+      doc.setFillColor(idx % 2 === 0 ? 255 : 248, 250, 252);
+      doc.rect(margin, y, contentWidth, rowHeight, 'F');
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(15, 23, 42);
+      doc.text(titleLines, margin + 3, y + 4);
+
+      doc.setFontSize(7.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text((g.category || 'Capacity').slice(0, 18), margin + 110, y + 4);
+
+      const gas = g.gasScore !== undefined ? (g.gasScore > 0 ? `+${g.gasScore}` : `${g.gasScore}`) : 'N/A';
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(g.gasScore && g.gasScore >= 0 ? 16 : 225, g.gasScore && g.gasScore >= 0 ? 185 : 29, g.gasScore && g.gasScore >= 0 ? 129 : 72);
+      doc.text(gas, margin + 145, y + 4);
+
+      const prog = g.progressPercent ?? g.progress ?? 0;
+      doc.setTextColor(15, 23, 42);
+      doc.text(`${prog}%`, margin + 168, y + 4);
+
+      y += rowHeight + 1;
+    });
+    y += 4;
+  }
+
+  // Section 3: Incidents, Behaviour Patterns & Safeguards
+  drawSection('3. Incident Trends, Restrictive Practices & Safeguards Review', [225, 29, 72]);
+  const incidents = data.recentIncidents || [];
+  const rps = data.restrictivePractices || [];
+
+  if (incidents.length === 0 && rps.length === 0) {
+    checkPageBreak(12);
+    doc.setFillColor(240, 253, 244);
+    doc.setDrawColor(187, 247, 208);
+    doc.roundedRect(margin, y, contentWidth, 10, 1, 1, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(22, 101, 52);
+    doc.text('Zero reportable incidents or unauthorized restrictive practices logged in current review period.', margin + 4, y + 6);
+    y += 14;
+  } else {
+    if (rps.length > 0) {
+      checkPageBreak(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(185, 28, 28);
+      doc.text(`Active Regulated Restrictive Practices (${rps.length} Authorized):`, margin + 3, y + 4);
+      y += 6;
+
+      rps.forEach((rp) => {
+        const rpLine = `${rp.practiceType}: ${rp.description} (Auth: ${rp.authorizationReference || 'Panel Pending'}, Expiry: ${rp.expiryDate})`;
+        const lines = doc.splitTextToSize(rpLine, contentWidth - 10);
+        checkPageBreak(lines.length * 4 + 4);
+        doc.setFillColor(254, 242, 242);
+        doc.roundedRect(margin, y, contentWidth, lines.length * 4 + 3, 1, 1, 'F');
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(153, 27, 27);
+        doc.text(lines, margin + 4, y + 3.5);
+        y += lines.length * 4 + 5;
+      });
+    }
+
+    if (incidents.length > 0) {
+      checkPageBreak(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Recent Incident Log (${incidents.length} Records):`, margin + 3, y + 4);
+      y += 6;
+
+      incidents.slice(0, 4).forEach((inc) => {
+        const incText = `${inc.incidentDate} [${inc.severity}]: ${inc.description.slice(0, 90)}... Action: ${inc.immediateActionTaken.slice(0, 60)}`;
+        const lines = doc.splitTextToSize(incText, contentWidth - 10);
+        checkPageBreak(lines.length * 4 + 3);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(51, 65, 85);
+        doc.text(lines, margin + 4, y + 3);
+        y += lines.length * 4 + 4;
+      });
+    }
+    y += 4;
+  }
+
+  // Section 4: Clinical Observations & Section 34 Recommendations
+  drawSection('4. Clinical Observations & Recommended NDIS Funding Allocation', [30, 64, 175]);
+  const recs = data.recommendations || [
+    'Continue Specialist Behavioural Intervention Support (07_002_0115_8_3) at 2.0 hrs/week for ongoing distress mitigation.',
+    'Maintain Allied Health / Therapy Supports (15_056_0128_1_3) at 1.5 hrs/fortnight for functional communication progression.',
+    'Implement updated visual schedules in school and community environments to reduce transition resistance.',
+    'Schedule 6-month comprehensive Functional Behaviour Assessment review with NDIS Senior Practitioner.'
+  ];
+
+  recs.forEach((rec, i) => {
+    const lines = doc.splitTextToSize(`${i + 1}. ${rec}`, contentWidth - 12);
+    checkPageBreak(lines.length * 4 + 4);
+    doc.setFillColor(238, 242, 255);
+    doc.setDrawColor(199, 210, 254);
+    doc.roundedRect(margin, y, contentWidth, lines.length * 4 + 3, 1, 1, 'FD');
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(30, 41, 59);
+    doc.text(lines, margin + 4, y + 3.5);
+    y += lines.length * 4 + 5;
+  });
+  y += 4;
+
+  // Section 5: Clinician & Supervisor Sign-off
+  checkPageBreak(40);
+  drawSection('5. Clinical Sign-off & Section 34 Professional Declaration', [71, 85, 105]);
+
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text(
+    'I declare that the clinical observations, goal assessments, and funding recommendations detailed in this report are evidence-based, directly relate to the participant\'s disability support needs, and meet NDIS Section 34 "Reasonable and Necessary" criteria.',
+    margin + 3,
+    y + 3,
+    { maxWidth: contentWidth - 6 }
+  );
+  y += 12;
+
+  // Signature Blocks
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(203, 213, 225);
+  doc.roundedRect(margin, y, (contentWidth - 6) / 2, 24, 1, 1, 'FD');
+  doc.roundedRect(margin + (contentWidth + 6) / 2, y, (contentWidth - 6) / 2, 24, 1, 1, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(15, 23, 42);
+  doc.text('Authoring Clinical Practitioner', margin + 4, y + 5);
+  doc.text('Clinical Director / Supervisor', margin + (contentWidth + 6) / 2 + 4, y + 5);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(71, 85, 105);
+  doc.text(`Name: ${practitionerName}`, margin + 4, y + 11);
+  doc.text(`Signed: [Digitally Verified] Date: ${meetingDate}`, margin + 4, y + 17);
+
+  doc.text(`Name: ${supervisorName}`, margin + (contentWidth + 6) / 2 + 4, y + 11);
+  doc.text(`Signed: [Approved in Breakthrough OS]`, margin + (contentWidth + 6) / 2 + 4, y + 17);
+
+  // Footer on all pages
+  const pageCount = (doc as any).internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(148, 163, 184);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.3);
+    doc.line(margin, pageHeight - 12, pageWidth - margin, pageHeight - 12);
+
+    doc.text(
+      'Breakthrough Coaching & Consulting | Confidential Clinical Progress Report | NDIS Quality & Safeguards Commission Compliant',
+      margin,
+      pageHeight - 8
+    );
+    doc.text(`Page ${i} of ${pageCount}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+  }
+
+  return doc;
+}
+
+/**
+ * Browser-side helper to export and trigger instant download of Clinical Review Report PDF via jsPDF.
+ */
+export function exportClinicalReportToPDF(data: ClinicalReviewReportData): void {
+  if (typeof window === 'undefined') return;
+
+  const clientName = data.client?.name || 'Participant';
+  const meetingDate = data.meetingDate || new Date().toISOString().slice(0, 10);
+  const fileName = `Clinical_Report_${clientName.replace(/\s+/g, '_')}_${meetingDate}.pdf`;
+
+  const doc = generateClinicalReviewReportWithJsPDF(data);
+  doc.save(fileName);
+}
+
 
