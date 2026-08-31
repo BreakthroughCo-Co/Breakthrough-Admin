@@ -1,7 +1,6 @@
 {
   "apphosting": {
     "backendId": "administration-breakthrough",
-    "rootDir": "/",
     "ignore": [
       "node_modules",
       ".git",

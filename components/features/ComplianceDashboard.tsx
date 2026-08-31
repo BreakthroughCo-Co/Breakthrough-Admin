@@ -7,6 +7,7 @@ import { Practitioner, Client } from '@/types';
 import { ComplianceReportModal } from './ComplianceReportModal';
 import { ComplianceReportingSubModule } from './ComplianceReportingSubModule';
 import { AuditBundleModal } from './AuditBundleModal';
+import { ComplianceRiskHeatmap } from './ComplianceRiskHeatmap';
 import {
   ResponsiveContainer,
   BarChart,
@@ -713,6 +714,8 @@ Return a valid JSON object matching this structure:
           <p className="text-[11px] text-slate-400">Due within 30 days</p>
         </div>
       </div>
+
+      <ComplianceRiskHeatmap />
 
       {/* NDIS Global Alert & Management Notification System */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-sm">
