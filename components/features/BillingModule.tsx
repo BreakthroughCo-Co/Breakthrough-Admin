@@ -9,7 +9,6 @@ import { NDISPricingSyncEngine } from '@/lib/ndisPricingService';
 import { ProdaBatchModal } from './ProdaBatchModal';
 import { FinancialControl } from './FinancialControl';
 import { BillingInsightsPanel } from './BillingInsightsPanel';
-import { PriceGuideLookup } from './PriceGuideLookup';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -1351,11 +1350,174 @@ export const BillingModule: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 2: NDIS PRICE GUIDE CATALOGUE & BUDGET VALIDATOR */}
+      {/* TAB 2: NDIS PRICE GUIDE CATALOGUE */}
       {activeTab === 'PRICE_GUIDE' && (
-        <PriceGuideLookup
-          onClaimCreated={() => setActiveTab('CLAIMS')}
-        />
+        <div className="space-y-4">
+          {/* Controls Bar */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            {/* Search Input */}
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="Search NDIS support code, name, or category..."
+                value={priceSearch}
+                onChange={(e) => setPriceSearch(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-teal-500"
+              />
+            </div>
+
+            {/* Auto-Sync Button (R13) */}
+            <button
+              type="button"
+              onClick={handleAutoSyncPriceGuide}
+              disabled={isSyncingPriceGuide || isViewer}
+              className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-sm border border-emerald-500/30 shrink-0 disabled:opacity-50"
+              title="Automatically sync with 2026 NDIS Price Guide catalogue & re-validate claims"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-emerald-200 ${isSyncingPriceGuide ? 'animate-spin' : ''}`} />
+              <span>{isSyncingPriceGuide ? 'Syncing NDIS Catalogue...' : 'Auto-Sync 2026 Price Guide'}</span>
+            </button>
+
+            {/* Category Dropdown */}
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 font-semibold shrink-0"
+              >
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat === 'ALL' ? 'All Support Categories' : cat}
+                  </option>
+                ))}
+              </select>
+
+              {/* Regional Modifier Selector */}
+              <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 p-1 rounded-xl text-xs">
+                <button
+                  onClick={() => setRegionalModifier('MM1')}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                    regionalModifier === 'MM1' ? 'bg-teal-500/20 text-teal-300' : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="MM1 Metropolitan (1.0x Rate)"
+                >
+                  Metro (1.0x)
+                </button>
+                <button
+                  onClick={() => setRegionalModifier('MM6')}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                    regionalModifier === 'MM6' ? 'bg-amber-500/20 text-amber-300' : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="MM6 Remote (1.4x Loading)"
+                >
+                  Remote (1.4x)
+                </button>
+                <button
+                  onClick={() => setRegionalModifier('MM7')}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                    regionalModifier === 'MM7' ? 'bg-rose-500/20 text-rose-300' : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="MM7 Very Remote (1.5x Loading)"
+                >
+                  V. Remote (1.5x)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Rate Changes Result Banner (R13) */}
+          {priceSyncResult && (
+            <div className="p-4 bg-emerald-950/30 border border-emerald-500/30 rounded-xl space-y-3 font-mono text-xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-emerald-300 font-bold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span>NDIS Pricing Catalogue Synchronized ({priceSyncResult.syncedCount} Items)</span>
+                </div>
+                <button onClick={() => setPriceSyncResult(null)} className="text-slate-400 hover:text-white font-sans">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-slate-300 font-sans text-xs">
+                Auto-sync completed at {new Date(priceSyncResult.timestamp).toLocaleTimeString()}. Re-validated {priceSyncResult.revalidatedClaimsCount} pending claims against updated price caps.
+              </p>
+              {priceSyncResult.changes && priceSyncResult.changes.length > 0 && (
+                <div className="space-y-1.5 bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
+                  <span className="text-[10px] text-slate-400 uppercase font-sans font-bold block">
+                    Detected Rate Differentials ({priceSyncResult.changesCount})
+                  </span>
+                  {priceSyncResult.changes.map((ch) => (
+                    <div key={ch.code} className="flex items-center justify-between text-[11px] text-slate-200">
+                      <span>{ch.code} - {ch.name}</span>
+                      <span className="text-emerald-400 font-bold">
+                        ${ch.oldRate.toFixed(2)} → ${ch.newRate.toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Price Guide Table */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-300 border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-500 uppercase tracking-wider text-[10px] bg-slate-950/50">
+                    <th className="py-3 px-4">NDIS Support Code</th>
+                    <th className="py-3 px-4">Support Item Line & Description</th>
+                    <th className="py-3 px-4">Category</th>
+                    <th className="py-3 px-4">National Cap Rate</th>
+                    <th className="py-3 px-4">
+                      Mod Rate ({regionalModifier})
+                    </th>
+                    <th className="py-3 px-4 text-right">Invoicing Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {filteredPriceGuide.map((item) => {
+                    const modRate = item.pricePerUnit * getMultiplier(regionalModifier);
+                    return (
+                      <tr key={item.code} className="hover:bg-slate-800/40 transition-colors">
+                        <td className="py-3 px-4 font-mono font-bold text-teal-300">{item.code}</td>
+                        <td className="py-3 px-4">
+                          <span className="font-bold text-white block">{item.name}</span>
+                          <span className="text-[10px] text-slate-400">Unit: {item.unitOfMeasure}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-0.5 rounded bg-slate-950 text-slate-300 text-[10px] border border-slate-800">
+                            {item.category}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-mono font-bold text-slate-200">
+                          ${item.pricePerUnit.toFixed(2)} / {item.unitOfMeasure}
+                        </td>
+                        <td className="py-3 px-4 font-mono font-extrabold text-emerald-400">
+                          ${modRate.toFixed(2)}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            onClick={() => {
+                              setCalcSupportCode(item.code);
+                              setSelectedSupport(item.code);
+                              setActiveTab('CALCULATOR');
+                            }}
+                            className="px-2.5 py-1 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 font-bold text-[11px] rounded-lg border border-teal-500/30 transition-all flex items-center gap-1 ml-auto"
+                          >
+                            <Calculator className="w-3 h-3" />
+                            <span>Calc Invoice</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* TAB 3: INVOICING RATE CALCULATOR */}

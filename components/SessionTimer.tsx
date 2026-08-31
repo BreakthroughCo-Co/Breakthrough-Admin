@@ -38,8 +38,7 @@ const TAB_NAME_MAP: Record<TabType, string> = {
   'security-audit': 'Security Audit & RBAC',
   'integrations': 'Cloud Integrations',
   'google-classroom': 'Workforce Training & Classroom',
-  'participant-portal': 'Participant & Carer Portal',
-  'ai-predictive-insights': 'AI Predictive Insights'
+  'participant-portal': 'Participant & Carer Portal'
 };
 
 const STORAGE_KEY = 'breakthrough_session_timer_state_v1';
