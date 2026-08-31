@@ -130,11 +130,10 @@ export const SecurityAuditModule: React.FC = () => {
   // Combine store audit logs with security access logs
   const combinedLogs: AuditLog[] = [
     ...auditLogs.filter((l) =>
-      l.action.includes('LOGIN') ||
-      l.action.includes('AUTH') ||
-      l.action.includes('SECURITY') ||
-      l.category.includes('SECURITY') ||
-      l.category.includes('AUTH')
+      l.action?.includes('LOGIN') ||
+      l.action?.includes('AUTH') ||
+      l.action?.includes('SECURITY') ||
+      (l.category && (l.category.includes('SECURITY') || l.category.includes('AUTH')))
     ),
     ...EXTENDED_SECURITY_LOGS
   ];

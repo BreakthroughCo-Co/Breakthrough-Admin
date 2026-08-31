@@ -182,6 +182,8 @@ export interface RestrictivePractice {
   authorisationStatus?: string;
   authorisedBy?: string;
   clinicalRationale?: string;
+  rationale?: string;
+  authorizationDate?: string;
   reductionProtocol?: string;
   fadePlanStatus?: string;
   startDate: string;
@@ -359,6 +361,7 @@ export interface BillingClaim {
   practitionerName?: string;
   supportItemName?: string;
   ndisCategory?: string;
+  claimType?: 'Plan Managed' | 'NDIA Managed' | 'Self Managed' | string;
   attachments?: AttachedDocument[];
   documents?: AttachedDocument[];
   createdAt?: string;
@@ -377,14 +380,18 @@ export interface OfflineDelta {
 export interface AuditLog {
   id: string;
   timestamp: string;
-  actorId: string;
-  actorName: string;
-  actorRole: UserRole;
+  actorId?: string;
+  actorName?: string;
+  actorRole?: UserRole;
   action: string;
-  entity: string;
-  entityId: string;
+  entity?: string;
+  entityId?: string;
+  category?: string;
+  targetId?: string;
+  userEmail?: string;
+  userRole?: UserRole | string;
   details: string;
-  ipAddress: string;
+  ipAddress?: string;
   severity?: 'Low' | 'Medium' | 'High' | 'Critical';
 }
 
