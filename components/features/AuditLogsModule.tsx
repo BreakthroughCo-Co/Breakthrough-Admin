@@ -120,16 +120,16 @@ export const AuditLogsModule: React.FC = () => {
     const query = searchTerm.toLowerCase();
     const matchesText =
       !searchTerm ||
-      l.action.toLowerCase().includes(query) ||
-      l.actorName.toLowerCase().includes(query) ||
-      l.actorRole.toLowerCase().includes(query) ||
+      (l.action && l.action.toLowerCase().includes(query)) ||
+      (l.actorName && l.actorName.toLowerCase().includes(query)) ||
+      (l.actorRole && l.actorRole.toLowerCase().includes(query)) ||
       (l.entity && l.entity.toLowerCase().includes(query)) ||
-      l.details.toLowerCase().includes(query);
+      (l.details && l.details.toLowerCase().includes(query));
 
     const severity = getAuditSeverity(l);
     const matchesSeverity = severityFilter === 'ALL' || severity === severityFilter;
 
-    const matchesRole = roleFilter === 'ALL' || l.actorRole.toUpperCase() === roleFilter.toUpperCase();
+    const matchesRole = roleFilter === 'ALL' || (l.actorRole && l.actorRole.toUpperCase() === roleFilter.toUpperCase());
 
     let matchesDate = true;
     if (startDate) {
@@ -158,14 +158,14 @@ export const AuditLogsModule: React.FC = () => {
     ];
     const rows = filteredLogs.map((l: AuditLog) => {
       const sev = getAuditSeverity(l);
-      const displayedDetails = isMasked ? maskSensitiveData(l.details) : l.details;
-      const displayedActor = isMasked ? maskSensitiveData(l.actorName) : l.actorName;
-      const displayedIp = isMasked ? maskSensitiveData(l.ipAddress) : l.ipAddress;
+      const displayedDetails = isMasked ? maskSensitiveData(l.details || '') : (l.details || '');
+      const displayedActor = isMasked ? maskSensitiveData(l.actorName || 'System') : (l.actorName || 'System');
+      const displayedIp = isMasked ? maskSensitiveData(l.ipAddress || '') : (l.ipAddress || '');
       
       const cleanDetails = (displayedDetails || '').replace(/"/g, '""');
       const cleanAction = (l.action || '').replace(/"/g, '""');
       const cleanActor = (displayedActor || '').replace(/"/g, '""');
-      return `"${l.id}","${l.timestamp}","${sev}","${cleanAction}","${cleanActor}","${l.actorRole}","${l.entity || ''}","${cleanDetails}","${displayedIp || ''}"`;
+      return `"${l.id}","${l.timestamp}","${sev}","${cleanAction}","${cleanActor}","${l.actorRole || 'SYSTEM'}","${l.entity || ''}","${cleanDetails}","${displayedIp || ''}"`;
     });
 
     const csvContent = [headers.join(','), ...rows].join('\n');
@@ -227,8 +227,8 @@ export const AuditLogsModule: React.FC = () => {
               ${filteredLogs
                 .map((l: AuditLog) => {
                   const sev = getAuditSeverity(l);
-                  const displayedActor = isMasked ? maskSensitiveData(l.actorName) : l.actorName;
-                  const displayedDetails = isMasked ? maskSensitiveData(l.details) : l.details;
+                  const displayedActor = isMasked ? maskSensitiveData(l.actorName || 'System') : (l.actorName || 'System');
+                  const displayedDetails = isMasked ? maskSensitiveData(l.details || '') : (l.details || '');
                   
                   const badgeClass =
                     sev === 'Critical'
@@ -248,7 +248,7 @@ export const AuditLogsModule: React.FC = () => {
                     </td>
                     <td>
                       <div><strong>${displayedActor}</strong></div>
-                      <div style="font-size: 10px; color: #64748b;">${l.actorRole}</div>
+                      <div style="font-size: 10px; color: #64748b;">${l.actorRole || 'SYSTEM'}</div>
                     </td>
                     <td>${displayedDetails}</td>
                   </tr>
@@ -288,9 +288,9 @@ RECORDED AUDIT LOGS:
 ${filteredLogs
   .map(
     (l: AuditLog) => {
-      const displayedActor = isMasked ? maskSensitiveData(l.actorName) : l.actorName;
-      const displayedDetails = isMasked ? maskSensitiveData(l.details) : l.details;
-      return `[${l.timestamp}] | SEVERITY: ${getAuditSeverity(l)} | ACTION: ${l.action} | ACTOR: ${displayedActor} (${l.actorRole}) | DETAILS: ${displayedDetails}`;
+      const displayedActor = isMasked ? maskSensitiveData(l.actorName || 'System') : (l.actorName || 'System');
+      const displayedDetails = isMasked ? maskSensitiveData(l.details || '') : (l.details || '');
+      return `[${l.timestamp}] | SEVERITY: ${getAuditSeverity(l)} | ACTION: ${l.action} | ACTOR: ${displayedActor} (${l.actorRole || 'SYSTEM'}) | DETAILS: ${displayedDetails}`;
     }
   )
   .join('\n')}
@@ -611,8 +611,8 @@ recorded above have been preserved in an immutable audit ledger compliant with t
               ) : (
                 filteredLogs.map((log: AuditLog) => {
                   const severity = getAuditSeverity(log);
-                  const displayedActor = isMasked ? maskSensitiveData(log.actorName) : log.actorName;
-                  const displayedDetails = isMasked ? maskSensitiveData(log.details) : log.details;
+                  const displayedActor = isMasked ? maskSensitiveData(log.actorName || 'System') : (log.actorName || 'System');
+                  const displayedDetails = isMasked ? maskSensitiveData(log.details || '') : (log.details || '');
                   return (
                     <tr key={log.id} className="hover:bg-slate-800/40 transition-colors">
                       <td className="py-3 px-4 text-slate-400 text-[11px] whitespace-nowrap">
@@ -627,7 +627,7 @@ recorded above have been preserved in an immutable audit ledger compliant with t
                       <td className="py-3 px-4 font-bold text-teal-300 whitespace-nowrap">{log.action}</td>
                       <td className="py-3 px-4 font-sans whitespace-nowrap">
                         <span className="text-white font-semibold">{displayedActor}</span>{' '}
-                        <span className="text-[10px] text-slate-400">({log.actorRole})</span>
+                        <span className="text-[10px] text-slate-400">({log.actorRole || 'SYSTEM'})</span>
                       </td>
                       <td className="py-3 px-4 text-slate-300 max-w-md truncate font-sans text-xs" title={displayedDetails}>
                         {displayedDetails}
