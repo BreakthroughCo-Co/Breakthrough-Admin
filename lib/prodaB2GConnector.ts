@@ -29,7 +29,7 @@ export class PRODAB2GConnector {
 
     // Rate Cap Enforcement Check (2026 NDIS Caps)
     const MAX_THERAPY_RATE = 244.22;
-    const rate = claim.rate || (claim.totalAmount / (claim.hours || 1));
+    const rate = claim.unitRate || (claim.totalAmount / (claim.hours || 1));
 
     if (rate > MAX_THERAPY_RATE) {
       return {

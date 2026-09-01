@@ -42,7 +42,8 @@ Terms: All services provided in accordance with NDIS Quality and Safeguards Comm
     addNotification({
       title: 'Agreement Signed Cryptographically',
       message: `SHA-256 digital certificate generated for ${selectedClient?.name}.`,
-      type: 'success',
+      type: 'agreement',
+      severity: 'success',
     });
   };
 

@@ -55,7 +55,7 @@ export class ChurnPredictor {
 
     // 4. Budget Burn Variance
     const allocated = client.allocatedBudget || 10000;
-    const utilized = client.utilizedBudget || 0;
+    const utilized = client.spentBudget || 0;
     const budgetBurnVariancePercent = Math.abs(((utilized / allocated) * 100) - 50);
 
     // Calculate composite risk score (0-100)

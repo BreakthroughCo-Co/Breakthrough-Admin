@@ -35,7 +35,8 @@ export const PlanReassessmentReportWriter: React.FC = () => {
       addNotification({
         title: 'NDIS Plan Report Generated',
         message: `Plan reassessment dossier prepared for ${selectedClient.name}.`,
-        type: 'success',
+        type: 'clinical',
+        severity: 'success',
       });
     }, 600);
   };

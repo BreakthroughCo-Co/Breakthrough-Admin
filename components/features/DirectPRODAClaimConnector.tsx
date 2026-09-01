@@ -36,7 +36,7 @@ export const DirectPRODAClaimConnector: React.FC = () => {
         } else {
           updateBillingClaim(res.claimId, {
             status: 'Rejected',
-            flaggedReason: res.errorMessage || 'PRODA B2G Rejection',
+            rejectionReason: res.errorMessage || 'PRODA B2G Rejection',
           });
         }
       }
@@ -44,13 +44,15 @@ export const DirectPRODAClaimConnector: React.FC = () => {
       addNotification({
         title: 'PRODA B2G Direct Batch Completed',
         message: `Successfully processed ${response.results.length - response.rejectedCount} claims ($${response.totalPaid.toFixed(2)}).`,
-        type: 'success',
+        type: 'billing',
+        severity: 'success',
       });
     } catch (err: any) {
       addNotification({
         title: 'PRODA B2G Gateway Error',
         message: err.message || 'Failed to connect to PRODA Gateway.',
-        type: 'warning',
+        type: 'billing',
+        severity: 'high',
       });
     } finally {
       setIsSubmitting(false);

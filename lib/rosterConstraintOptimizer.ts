@@ -22,7 +22,7 @@ export class RosterConstraintOptimizer {
     let travelSaved = 0;
     let breachesAvoided = 0;
 
-    const activePracs = practitioners.filter((p) => p.status !== 'Inactive' && (p.capacity || 20) > 0);
+    const activePracs = practitioners.filter((p) => p.status !== 'Inactive' && (p.caseloadLimit || 20) > 0);
     const activeClients = clients.filter((c) => c.status === 'Active');
 
     if (activePracs.length === 0 || activeClients.length === 0) {
@@ -54,10 +54,7 @@ export class RosterConstraintOptimizer {
         date: dateRange.start,
         startTime: '09:00',
         endTime: '11:00',
-        durationHours: 2.0,
-        status: 'Scheduled',
-        location: client.address || 'In-Clinic',
-        supportItemCode: '07_002_0115_8_3',
+        supportType: '07_002_0115_8_3 - Specialist Behavioural Intervention Support',
       });
 
       travelSaved += 12.5; // Average km saved per clustered route

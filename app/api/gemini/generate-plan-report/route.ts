@@ -4,7 +4,7 @@ import { PlanReportGenerator } from '../../../../lib/planReportGenerator';
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req, ['ADMIN', 'PRACTITIONER', 'SUPPORT_COORDINATOR']);
-  if (auth.error) return auth.error;
+  if ('errorResponse' in auth) return auth.errorResponse;
 
   try {
     const body = await req.json();

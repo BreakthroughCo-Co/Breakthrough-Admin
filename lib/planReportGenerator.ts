@@ -43,7 +43,7 @@ export class PlanReportGenerator {
 
     const goals = client.goals || [];
     const goalLedger = goals.map((g) => ({
-      goalDescription: g.description,
+      goalDescription: g.title,
       targetDate: g.targetDate || '2026-12-31',
       progressPercentage: g.progressPercent || 50,
       clinicalObservation: `Participant has engaged across ${clientNotes.length} structured sessions, demonstrating functional skill acquisition.`,
