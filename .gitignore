@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+dist/
+.agents/
+tsconfig.tsbuildinfo
+Icon*
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example

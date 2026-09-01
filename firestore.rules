@@ -1,0 +1,298 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny catch-all safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ==========================================
+    // Core Helper Functions & Role Evaluators
+    // ==========================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function getUserRole() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? getUserData().role
+        : null;
+    }
+
+    function isViewer() {
+      return isSignedIn() && (
+        getUserRole() == 'VIEWER' ||
+        getUserRole() == 'viewer' ||
+        request.auth.token.role == 'VIEWER' ||
+        request.auth.token.role == 'viewer'
+      );
+    }
+
+    function isParticipant() {
+      return isSignedIn() && (
+        getUserRole() == 'PARTICIPANT' ||
+        getUserRole() == 'participant' ||
+        request.auth.token.role == 'PARTICIPANT' ||
+        request.auth.token.role == 'participant'
+      );
+    }
+
+    function isPending() {
+      return isSignedIn() && (
+        getUserRole() == 'PENDING' ||
+        getUserRole() == 'pending'
+      );
+    }
+
+    function canWrite() {
+      return isSignedIn() && !isViewer() && !isParticipant() && !isPending();
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        getUserRole() == 'ADMIN' ||
+        getUserRole() == 'admin' ||
+        request.auth.token.role == 'ADMIN' ||
+        request.auth.token.role == 'admin'
+      );
+    }
+
+    function isPractitioner() {
+      return isSignedIn() && (
+        getUserRole() == 'PRACTITIONER' ||
+        getUserRole() == 'practitioner' ||
+        isAdmin()
+      );
+    }
+
+    function isSupportCoordinator() {
+      return isSignedIn() && (
+        getUserRole() == 'SUPPORT_COORDINATOR' ||
+        getUserRole() == 'support_coordinator' ||
+        isAdmin()
+      );
+    }
+
+    // ==========================================
+    // 1. System Health & Connection Test Probes
+    // ==========================================
+    match /system/{docId} {
+      allow get: if true; // Public read for connection health probe
+      allow write: if false;
+    }
+
+    // ==========================================
+    // 2. User Accounts & Google Keep Notes
+    // ==========================================
+    match /users/{userId} {
+      allow get: if isOwner(userId) || (isSignedIn() && !isParticipant() && !isPending());
+      allow list: if isSignedIn() && (isAdmin() || isPractitioner());
+      allow create: if (isOwner(userId) && (request.resource.data.role == 'PENDING' || request.resource.data.role == 'PARTICIPANT')) || isAdmin();
+      allow update: if (isOwner(userId) && (!('role' in request.resource.data) || request.resource.data.role == resource.data.role)) || isAdmin();
+      allow delete: if isAdmin();
+
+      // Google Keep user-owned notes and checklists
+      match /keepNotes/{noteId} {
+        allow read: if (isOwner(userId) && !isParticipant() && !isPending()) || isAdmin();
+        allow write: if (isOwner(userId) && canWrite()) || isAdmin();
+      }
+    }
+
+    // ==========================================
+    // 3. Clinical Clients / NDIS Participants
+    // ==========================================
+    match /clients/{clientId} {
+      // Non-participants can read all clients; PARTICIPANT role can only read their own linked client document
+      allow read: if (isSignedIn() && !isParticipant()) || (
+        isParticipant() && (
+          clientId == request.auth.uid ||
+          (resource != null && resource.data.email == request.auth.token.email) ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
+            getUserData().clientId == clientId ||
+            (resource != null && resource.data.ndisNumber == getUserData().ndisNumber) ||
+            (resource != null && resource.data.email == getUserData().email)
+          ))
+        )
+      );
+      allow create, update: if canWrite();
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // 4. Clinical Case Notes
+    // ==========================================
+    match /caseNotes/{noteId} {
+      allow read: if isSignedIn() && !isParticipant();
+      allow create: if canWrite();
+      allow update: if canWrite() && (isAdmin() || request.auth.uid == resource.data.authorId);
+      allow delete: if isAdmin() || (canWrite() && request.auth.uid == resource.data.authorId);
+    }
+
+    // ==========================================
+    // 5. NDIS Billing Claims
+    // ==========================================
+    match /billingClaims/{claimId} {
+      allow read: if isSignedIn() && !isParticipant();
+      allow create, update: if canWrite();
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // 6. Incidents & Safeguards Governance
+    // ==========================================
+    match /incidents/{incidentId} {
+      allow read: if (isSignedIn() && !isParticipant()) || (
+        isParticipant() && (
+          resource != null && (
+            resource.data.clientId == request.auth.uid ||
+            (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
+              resource.data.clientId == getUserData().clientId ||
+              resource.data.clientId == getUserData().participantId ||
+              resource.data.clientEmail == getUserData().email
+            ))
+          )
+        )
+      );
+      allow create, update: if canWrite();
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // 7. Restrictive Practices Register
+    // ==========================================
+    match /restrictivePractices/{practiceId} {
+      allow read: if isSignedIn() && !isParticipant();
+      allow create, update: if canWrite();
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // 8. ABC Behaviour Logs
+    // ==========================================
+    match /abcLogs/{logId} {
+      allow read: if isSignedIn() && !isParticipant();
+      allow create, update: if canWrite();
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // 9. Behaviour Support Plans (BSP Documents)
+    // ==========================================
+    match /bspDocuments/{documentId} {
+      allow read: if isSignedIn() && !isParticipant();
+      allow create, update: if canWrite();
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // 10. CRM Leads & Intake Pipeline
+    // ==========================================
+    match /crmLeads/{leadId} {
+      allow read: if isSignedIn() && !isParticipant();
+      allow create, update: if canWrite();
+      allow delete: if isAdmin();
+    }
+
+    match /leads/{leadId} {
+      allow read: if isSignedIn() && !isParticipant();
+      allow create, update: if canWrite();
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // 11. CRM Tasks & Action Items
+    // ==========================================
+    match /crmTasks/{taskId} {
+      allow read: if isSignedIn() && !isParticipant();
+      allow create, update: if canWrite();
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // 12. HR Practitioners & Staff Roster
+    // ==========================================
+    match /practitioners/{practitionerId} {
+      allow read: if isSignedIn() && !isParticipant();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ==========================================
+    // 13. NDIS Price Guide / Support Items (Read-Only)
+    // ==========================================
+    match /supportItems/{code} {
+      allow read: if isSignedIn() && !isParticipant();
+      allow write: if isAdmin();
+    }
+
+    // ==========================================
+    // 14. Audit Trail Ledger (Append-Only)
+    // ==========================================
+    match /auditLogs/{logId} {
+      allow read: if isSignedIn() && !isParticipant() && !isPending();
+      allow create: if isSignedIn() && !isParticipant() && !isPending();
+      allow update, delete: if false; // Strict immutability
+    }
+
+    // ==========================================
+    // 15. Scheduled Shifts & Appointments (Rostering)
+    // ==========================================
+    match /scheduledShifts/{shiftId} {
+      // Non-participants can read all shifts; PARTICIPANT can read their own scheduled appointments
+      allow read: if (isSignedIn() && !isParticipant() && !isPending()) || (
+        isParticipant() && (
+          resource != null && (
+            resource.data.clientId == request.auth.uid ||
+            (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
+              resource.data.clientId == getUserData().clientId ||
+              resource.data.clientEmail == getUserData().email
+            ))
+          )
+        )
+      );
+      allow create, update: if canWrite();
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // Real-time Notifications & Alerts
+    // ==========================================
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && (
+        resource == null ||
+        resource.data.userId == request.auth.uid ||
+        resource.data.recipientId == request.auth.uid ||
+        resource.data.recipientEmail == request.auth.token.email ||
+        isAdmin() ||
+        (canWrite() && resource.data.channel != 'PARTICIPANT_PRIVATE')
+      );
+      allow create: if isSignedIn() && (canWrite() || isAdmin());
+      allow update: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.recipientId == request.auth.uid ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // 16. Document Metadata & Files (R11)
+    // ==========================================
+    match /documents/{docId} {
+      allow read: if isSignedIn() && !isParticipant();
+      allow create, update: if canWrite();
+      allow delete: if isAdmin() || (canWrite() && isOwner(resource.data.uploadedBy));
+    }
+  }
+}
