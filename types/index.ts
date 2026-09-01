@@ -3,7 +3,9 @@ export type UserRole = 'ADMIN' | 'PRACTITIONER' | 'VIEWER' | 'SUPPORT_COORDINATO
 export type WorkerScreeningStatus = 'Active' | 'Valid' | 'Expiring Soon' | 'Expiring' | 'Pending' | 'Expired';
 
 export interface UserProfile {
+  /** Canonical unique identifier matching Firestore document key */
   id: string;
+  /** Optional uid alias for Firebase Auth compatibility */
   uid?: string;
   name: string;
   displayName?: string;
@@ -18,10 +20,12 @@ export interface UserProfile {
   ndisNumber?: string;
   isInviteOnly?: boolean;
   workerScreeningStatus?: WorkerScreeningStatus;
+  screeningStatus?: WorkerScreeningStatus;
   workerScreeningExpiry?: string;
   policeCheckExpiry?: string;
   ndisOrientationDone?: boolean;
   activeCaseload?: number;
+  assignedClientIds?: string[];
   lastLogin?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -33,10 +37,9 @@ export interface ClientGoal {
   category: 'Core' | 'Capacity Building' | 'Capital' | 'Social & Community' | string;
   targetDate: string;
   progressPercent: number;
-  progress?: number;
   status: 'In Progress' | 'Achieved' | 'Deferred';
-  gasScore?: -2 | -1 | 0 | 1 | 2;
-  gasHistory?: { date: string; score: -2 | -1 | 0 | 1 | 2; note: string }[];
+  gasScore?: -2 | -1 | 0 | 1 | 2 | number;
+  gasHistory?: { date: string; score: -2 | -1 | 0 | 1 | 2 | number; note?: string }[];
   linkedNoteIds?: string[];
 }
 
@@ -195,7 +198,18 @@ export interface RestrictivePractice {
   lastReportedDate?: string;
   monthlyUsageCount?: number;
   clinicalSupervisorId?: string;
+  category?: string;
 }
+
+export type IncidentCategory =
+  | 'Physical Aggression'
+  | 'Property Damage'
+  | 'Verbal Aggression'
+  | 'Self-Harm'
+  | 'Unauthorized Restrictive Practice'
+  | 'Absconding'
+  | 'Medication Error'
+  | 'Other';
 
 export interface Incident {
   id: string;
@@ -212,7 +226,17 @@ export interface Incident {
   reportedByRole?: string;
   reportedByName?: string;
   severity: 'Low' | 'Medium' | 'High' | 'Critical / Reportable';
-  status: 'Investigating' | 'Under Investigation' | 'Reported to NDIS Commission' | 'Closed' | 'Corrective Action Required' | 'Resolved' | 'Open';
+  status:
+    | 'Investigating'
+    | 'Under Investigation'
+    | 'Reported to NDIS Commission'
+    | 'Closed'
+    | 'Corrective Action Required'
+    | 'Resolved'
+    | 'Open'
+    | 'Clinical Review'
+    | 'Director Sign-off'
+    | IncidentWorkflowStatus;
   type?: string;
   injuries?: string;
   investigationNotes?: string;
@@ -263,8 +287,8 @@ export interface Practitioner {
   workerScreeningExpiry?: string;
   wwccNumber?: string;
   wwccExpiry?: string;
-  screeningStatus: 'Valid' | 'Expiring Soon' | 'Expiring' | 'Expired';
-  workerScreeningStatus?: 'Active' | 'Pending' | 'Expiring Soon' | 'Expiring' | 'Expired' | 'Valid';
+  screeningStatus: WorkerScreeningStatus;
+  workerScreeningStatus?: WorkerScreeningStatus;
   screeningId?: string;
   screeningExpiry?: string;
   screeningExpiryDate: string;
@@ -288,24 +312,33 @@ export interface Practitioner {
 export interface ABCLog {
   id: string;
   clientId: string;
-  clientName: string;
-  timestamp: string;
-  timeOfDay: string; // HH:mm
-  dayOfWeek: string;
-  antecedent: string;
+  clientName?: string;
+  date?: string;
+  time?: string;
+  timestamp?: string;
+  timeOfDay?: string;
+  dayOfWeek?: string;
+  location?: string;
   behavior: string;
+  antecedent: string;
   consequence: string;
-  intensity: number; // 1-5
+  intensity: number | 'Low' | 'Medium' | 'High' | 'Severe';
   durationMinutes: number;
-  location: string;
-  perceivedFunction: 'Escape/Avoidance' | 'Attention/Social' | 'Tangible/Access' | 'Sensory/Automatic';
-  recordedBy: string;
+  setting?: string;
+  perceivedFunction?: 'Escape/Avoidance' | 'Attention' | 'Attention/Social' | 'Tangible' | 'Tangible/Access' | 'Sensory/Automatic' | string;
+  staffPresent?: string[];
+  recordedBy?: string;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface BSPDocument {
   id: string;
   clientId: string;
   clientName: string;
+  title?: string;
+  ndisNumber?: string;
   version: string; // e.g. "v1.2"
   status:
     | 'Draft'
@@ -317,7 +350,8 @@ export interface BSPDocument {
     | 'Panel Submitted'
     | 'Re-Authorized'
     | 'Current'
-    | 'Due in 30 Days';
+    | 'Due in 30 Days'
+    | 'Expired';
   summary: string;
   primaryBehaviorsOfConcern: string[];
   proactiveStrategies: string[];
@@ -326,6 +360,17 @@ export interface BSPDocument {
   reviewDate: string;
   authorName: string;
   lastUpdated: string;
+  expiryDate?: string;
+  createdDate?: string;
+  authorId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  sections?: {
+    title: string;
+    content: string;
+    subsections?: { title: string; content: string }[];
+  }[];
+  restrictivePracticesCount?: number;
 }
 
 export interface NDISSupportItem {
@@ -333,7 +378,19 @@ export interface NDISSupportItem {
   name: string;
   category: string;
   pricePerUnit: number;
-  unitOfMeasure: 'Hour' | 'Each' | 'Day';
+  priceCap?: number;
+  unit?: string;
+  rate?: number;
+  description?: string;
+  supportCategoryNumber?: string;
+  registrationRequirement?: string;
+  nonFaceToFaceAllowed?: boolean;
+  providerTravelAllowed?: boolean;
+  shortNoticeCancellationAllowed?: boolean;
+  effectiveFrom?: string;
+  effectiveTo?: string;
+  isActive?: boolean;
+  unitOfMeasure?: 'Hour' | 'Each' | 'Day';
 }
 
 export interface BillingClaim {
@@ -344,39 +401,46 @@ export interface BillingClaim {
   serviceDate: string;
   ndisSupportItem: string; // e.g. "07_002_0115_8_3 - Specialist Behavioural Intervention"
   supportItemCode: string;
+  supportItemName?: string;
   hours: number;
   hoursWorked?: number;
   quantity?: number;
   unitRate: number;
   unitPrice?: number;
   totalAmount: number;
-  status: 'Pending' | 'Approved' | 'Submitted PACE' | 'Paid' | 'Rejected';
-  invoiceNumber: string;
-  reconciliationStatus?: 'Reconciled' | 'Pending' | 'Failed' | 'SLA_Breach_Risk';
+  status: 'Draft' | 'Pending' | 'Approved' | 'Submitted PACE' | 'Paid' | 'Rejected';
+  invoiceNumber?: string;
+  caseNoteId?: string;
+  notes?: string;
+  rejectionReason?: string;
+  rejectionCode?: string;
+  paceReference?: string;
+  paymentReceiptSent?: boolean;
+  reconciliationStatus?: 'Reconciled' | 'Pending' | 'Failed' | 'SLA_Breach_Risk' | 'Unreconciled';
   reconciliationError?: string;
   slaDeadline?: string;
-  paymentReceivedDate?: string;
-  xeroInvoiceId?: string;
+  claimType?: 'Standard' | 'Non-Face-To-Face' | 'Provider Travel' | 'Cancellation' | 'Plan Managed' | 'NDIA Managed' | 'Self Managed' | string;
+  validationBadge?: 'CLEAN' | 'WARNING' | 'ERROR';
   validationFlag?: string;
   validationResult?: BillingValidationResult;
   practitionerId?: string;
   practitionerName?: string;
-  supportItemName?: string;
   ndisCategory?: string;
-  claimType?: 'Plan Managed' | 'NDIA Managed' | 'Self Managed' | string;
   attachments?: AttachedDocument[];
   documents?: AttachedDocument[];
+  paymentReceivedDate?: string;
+  xeroInvoiceId?: string;
   createdAt?: string;
   updatedAt?: string;
 }
 
-export interface OfflineDelta<T = Record<string, any>> {
+export interface OfflineDelta {
   id: string;
   timestamp: string;
   action: string;
   entity: string;
   entityId: string;
-  payload: T;
+  payload: Record<string, unknown>;
 }
 
 export interface AuditLog {
@@ -854,7 +918,17 @@ export interface NDISAuditBundle {
   htmlSummary?: string;
 }
 
-export type BSPReviewStatus = 'Current' | 'Due in 30 Days' | 'Under Review' | 'Panel Submitted' | 'Re-Authorized' | 'Expired';
+export type BSPReviewStatus =
+  | 'Current'
+  | 'Due in 30 Days'
+  | 'Under Review'
+  | 'Panel Submitted'
+  | 'Panel Review'
+  | 'Submitted to NDIS'
+  | 'Active'
+  | 'Superseded'
+  | 'Re-Authorized'
+  | 'Expired';
 
 export interface BSPReviewAlert {
   bspId: string;

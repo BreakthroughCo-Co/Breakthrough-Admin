@@ -201,7 +201,7 @@ Mobility & Physical Profile: ${safeClient.mobilityNeeds || 'Independent ambulant
   ];
 
   const avgIntensity = clientABC.length > 0
-    ? (clientABC.reduce((s, l) => s + (l.intensity || 3), 0) / clientABC.length).toFixed(1)
+    ? (clientABC.reduce((s, l) => s + (typeof l.intensity === 'number' ? l.intensity : l.intensity === 'High' ? 4 : l.intensity === 'Severe' ? 5 : l.intensity === 'Low' ? 1 : 3), 0) / clientABC.length).toFixed(1)
     : '3.0';
   const avgDuration = clientABC.length > 0
     ? Math.round(clientABC.reduce((s, l) => s + (l.durationMinutes || 10), 0) / clientABC.length)
@@ -312,7 +312,7 @@ ${proactiveStrategies.map((s, idx) => `${idx + 1}. ${s}`).join('\n\n')}`,
         'Distress Tolerance & Co-Regulation: Practice deep diaphragmatic breathing and tactile weighted lap-pad usage during anticipated routine shifts.'
       ];
 
-  const goalLinkages = clientGoals.map((g) => `Goal "${g.title}" (Progress: ${g.progressPercent || g.progress || 0}%, GAS: ${g.gasScore ?? 0})`);
+  const goalLinkages = clientGoals.map((g) => `Goal "${g.title}" (Progress: ${g.progressPercent || 0}%, GAS: ${g.gasScore ?? 0})`);
 
   const section6: ComprehensiveBSPSection = {
     sectionNumber: 6,

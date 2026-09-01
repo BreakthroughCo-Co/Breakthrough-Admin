@@ -7,11 +7,21 @@ export const runtime = 'nodejs';
 
 // Server-side rate limiter: max 40 requests per 60 seconds per user
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const MAX_RATE_LIMIT_KEYS = 1000;
 
 function checkRateLimit(key: string): boolean {
   const now = Date.now();
   const windowMs = 60 * 1000;
   const maxReqs = 40;
+
+  // Periodic garbage collection when map grows
+  if (rateLimitMap.size > MAX_RATE_LIMIT_KEYS) {
+    for (const [k, v] of rateLimitMap.entries()) {
+      if (now > v.resetTime) {
+        rateLimitMap.delete(k);
+      }
+    }
+  }
 
   const current = rateLimitMap.get(key);
   if (!current || now > current.resetTime) {

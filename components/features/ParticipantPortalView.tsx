@@ -8,8 +8,10 @@ import { redactCaseNote, batchRedactNotes, getParticipantReadableIncidents } fro
 import {
   User, Calendar as CalendarIcon, DollarSign, Target, FileText, MessageSquare, ShieldCheck,
   CheckCircle2, AlertTriangle, HeartHandshake, ChevronRight, Lightbulb, CheckSquare, Send, Star, FileDown,
-  ChevronLeft, Printer, BookOpen, Search, Download, HelpCircle, TrendingUp, Award, Sparkles
+  ChevronLeft, Printer, BookOpen, Search, Download, HelpCircle, TrendingUp, Award, Sparkles,
+  Volume2, VolumeX, Globe
 } from 'lucide-react';
+import { SupportedLanguage, SUPPORTED_LANGUAGES, t, speakText } from '@/lib/i18n';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { motion } from 'motion/react';
 import { ParticipantGoalReportModal } from '@/components/features/ParticipantGoalReportModal';
@@ -258,6 +260,25 @@ export const ParticipantPortalView: React.FC = () => {
     return () => clearTimeout(timer);
   }, [addNotification]);
 
+  // Multi-Language & Speech Synthesis Accessibility State
+  const [currentLang, setCurrentLang] = useState<SupportedLanguage>('en');
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const stopSpeakingRef = React.useRef<(() => void) | null>(null);
+
+  const handleToggleReadAloud = () => {
+    if (isSpeaking) {
+      stopSpeakingRef.current?.();
+      setIsSpeaking(false);
+    } else {
+      setIsSpeaking(true);
+      const textToRead = `${t('welcome', currentLang)}. ${client?.name || 'Participant'}, ${t('ndisNumber', currentLang)} ${client?.ndisNumber || ''}. ${t('totalBudget', currentLang)}: $${(client?.totalBudget || 48500).toLocaleString()}. ${t('remainingBudget', currentLang)}: $${(client ? client.totalBudget - client.spentBudget : 24150).toLocaleString()}.`;
+      const stopFn = speakText(textToRead, currentLang, () => {
+        setIsSpeaking(false);
+      });
+      stopSpeakingRef.current = stopFn;
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12 print:text-black">
       {/* Header Banner */}
@@ -283,7 +304,38 @@ export const ParticipantPortalView: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 print:hidden">
+          <div className="flex items-center gap-2.5 print:hidden flex-wrap">
+            {/* Multi-Language CALD Selector */}
+            <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5">
+              <Globe className="w-3.5 h-3.5 text-teal-400" />
+              <select
+                value={currentLang}
+                onChange={(e) => setCurrentLang(e.target.value as SupportedLanguage)}
+                className="bg-transparent text-xs text-slate-200 font-bold focus:outline-none cursor-pointer"
+              >
+                {SUPPORTED_LANGUAGES.map((l) => (
+                  <option key={l.code} value={l.code} className="bg-slate-900 text-white">
+                    {l.flag} {l.nativeName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Accessible Text-To-Speech Read Aloud */}
+            <button
+              type="button"
+              onClick={handleToggleReadAloud}
+              className={`px-3 py-2 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition-all cursor-pointer ${
+                isSpeaking
+                  ? 'bg-rose-600 hover:bg-rose-500 text-white border-rose-500 shadow-lg shadow-rose-950/50 animate-pulse'
+                  : 'bg-slate-800 hover:bg-slate-700 text-teal-300 border-teal-500/30 shadow-sm'
+              }`}
+              title="Accessible voice reading for participants and families"
+            >
+              {isSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              <span>{isSpeaking ? t('stopVoiceReader', currentLang) : t('voiceReader', currentLang)}</span>
+            </button>
+
             {!isParticipantUser && clients.length > 1 && (
               <select
                 value={selectedClientId}
@@ -925,7 +977,7 @@ export const ParticipantPortalView: React.FC = () => {
       <ParticipantChatbot
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
-        client={client}
+        client={client || undefined}
         appointments={clientAppointments}
         isModal={true}
       />
@@ -934,7 +986,7 @@ export const ParticipantPortalView: React.FC = () => {
       <ParticipantGoalReportModal
         isOpen={isGoalReportModalOpen}
         onClose={() => setIsGoalReportModalOpen(false)}
-        client={client}
+        client={client || undefined}
         notes={caseNotes}
         appointments={clientAppointments}
       />

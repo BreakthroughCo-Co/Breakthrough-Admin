@@ -57,6 +57,11 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+  } else if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { received: false, error: 'UNAUTHORIZED: SEVENTEENHATS_WEBHOOK_SECRET is required in production environment' },
+      { status: 401 }
+    );
   }
 
   let event: any = {};

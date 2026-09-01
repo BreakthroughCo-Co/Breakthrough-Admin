@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { NDISProdaApiService } from '@/lib/prodaService';
+import { requireAuth } from '@/lib/auth/verifySession';
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireAuth(req, ['ADMIN', 'PRACTITIONER']);
+  if ('errorResponse' in authResult) {
+    return authResult.errorResponse;
+  }
+
   try {
     const body = await req.json();
     const { claimIds, claims = [], providerRegNumber = '405001234' } = body;
@@ -31,6 +40,11 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const authResult = await requireAuth(req, ['ADMIN', 'PRACTITIONER', 'SUPPORT_COORDINATOR', 'VIEWER']);
+  if ('errorResponse' in authResult) {
+    return authResult.errorResponse;
+  }
+
   return NextResponse.json({
     service: 'NDIS PRODA B2G Direct Batch Claim Submission API',
     version: '2026.4.2',

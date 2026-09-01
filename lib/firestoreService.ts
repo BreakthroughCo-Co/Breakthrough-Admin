@@ -357,7 +357,7 @@ export const createCRMTask = (task: CRMTask | Omit<CRMTask, 'id' | 'createdAt' |
       priority: 'Medium' as const,
       category: 'General' as const,
       dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      assignedTo: auth.currentUser?.displayName || 'Unassigned',
+      assignedTo: 'Unassigned',
       createdAt: now,
       updatedAt: now
     },

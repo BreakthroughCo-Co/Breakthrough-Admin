@@ -1,4 +1,4 @@
-import type { CaseNote, PlainLanguageSessionNote, Incident } from '../types/index.ts';
+import type { CaseNote, PlainLanguageSessionNote, Incident } from '@/types';
 
 /**
  * Clinical Jargon Translation Dictionary

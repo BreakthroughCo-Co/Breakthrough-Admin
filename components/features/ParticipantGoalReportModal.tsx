@@ -26,7 +26,7 @@ import {
 interface ParticipantGoalReportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  client: Client;
+  client?: Client | null;
   notes?: CaseNote[];
   appointments?: ScheduledShift[];
 }
@@ -91,7 +91,7 @@ export const ParticipantGoalReportModal: React.FC<ParticipantGoalReportModalProp
 
   const averageProgress = useMemo(() => {
     if (!goals.length) return 0;
-    const sum = goals.reduce((acc, g) => acc + (g.progressPercent || g.progress || 0), 0);
+    const sum = goals.reduce((acc, g) => acc + (g.progressPercent || 0), 0);
     return Math.round(sum / goals.length);
   }, [goals]);
 
@@ -365,7 +365,7 @@ export const ParticipantGoalReportModal: React.FC<ParticipantGoalReportModalProp
 
             <div className="space-y-4">
               {goals.map((goal, index) => {
-                const progress = goal.progressPercent || goal.progress || 0;
+                const progress = goal.progressPercent || 0;
                 const gas = getGasLabel(goal.gasScore);
 
                 // SVG Radial calculations

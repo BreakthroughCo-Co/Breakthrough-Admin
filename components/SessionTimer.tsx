@@ -39,7 +39,11 @@ const TAB_NAME_MAP: Record<TabType, string> = {
   'integrations': 'Cloud Integrations',
   'google-classroom': 'Workforce Training & Classroom',
   'participant-portal': 'Participant & Carer Portal',
-  'ai-predictive-insights': 'AI Predictive Insights'
+  'ai-predictive-insights': 'AI Predictive Insights',
+  'document-intelligence': 'Document Intelligence & OCR',
+  'voice-scribe': 'Clinical Voice Scribe',
+  'ai-radar': 'Caseload Risk Radar',
+  'audit-simulator': 'NDIS Audit Simulator'
 };
 
 const STORAGE_KEY = 'breakthrough_session_timer_state_v1';

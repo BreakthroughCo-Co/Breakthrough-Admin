@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID || 'AC_sandbox_dummy_sid';
     const sid = `SM${crypto.randomUUID().replace(/-/g, '').slice(0, 32)}`;
 
     return NextResponse.json(

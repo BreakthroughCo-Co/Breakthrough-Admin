@@ -120,7 +120,7 @@ export const ComplianceReportingSubModule: React.FC = () => {
     let count = 0;
     filteredClients.forEach((c) => {
       c.goals?.forEach((g) => {
-        totalProgress += (g.progress ?? g.progressPercent ?? 0);
+        totalProgress += (g.progressPercent ?? 0);
         count++;
       });
     });
@@ -446,7 +446,7 @@ Please draft a 3-paragraph executive clinical narrative:
             <td><strong>${c.name}</strong></td>
             <td><code>${c.ndisNumber}</code></td>
             <td>${primaryGoal?.title || 'Capacity Building'}</td>
-            <td><strong style="color: #0d9488;">${primaryGoal?.progress || 80}%</strong></td>
+            <td><strong style="color: #0d9488;">${primaryGoal?.progressPercent || 80}%</strong></td>
             <td style="font-size: 8.5pt;">${latestNote?.assessment || latestNote?.subjective || 'Regular therapeutic engagement with positive milestone attainment.'}</td>
           </tr>
         `;
@@ -877,7 +877,7 @@ Please draft a 3-paragraph executive clinical narrative:
                             <td className="p-2.5 font-mono text-slate-400">{client.ndisNumber}</td>
                             <td className="p-2.5 text-slate-300">{primaryGoal?.title || 'Capacity Building'}</td>
                             <td className="p-2.5 font-bold text-teal-400 font-mono">
-                              {primaryGoal?.progress || 82}%
+                              {primaryGoal?.progressPercent || 82}%
                             </td>
                             <td className="p-2.5 text-slate-400 text-[11px] max-w-xs truncate">
                               {note?.assessment || note?.subjective || 'Regular therapeutic intervention.'}

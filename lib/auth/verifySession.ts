@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as admin from 'firebase-admin';
+import { getApps, initializeApp, cert, type App } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 import { UserRole } from '@/types';
 
-let adminApp: admin.app.App | null = null;
+let adminApp: App | null = null;
 
-export function getFirebaseAdminApp(): admin.app.App {
+export function getFirebaseAdminApp(): App {
   if (adminApp) return adminApp;
 
-  if (admin.apps.length > 0) {
-    adminApp = admin.apps[0]!;
+  const existingApps = getApps();
+  if (existingApps.length > 0) {
+    adminApp = existingApps[0]!;
     return adminApp;
   }
 
@@ -22,18 +25,18 @@ export function getFirebaseAdminApp(): admin.app.App {
     const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
     if (serviceAccountKey) {
       const parsed = JSON.parse(serviceAccountKey);
-      adminApp = admin.initializeApp({
-        credential: admin.credential.cert(parsed),
+      adminApp = initializeApp({
+        credential: cert(parsed),
         projectId
       });
     } else {
-      adminApp = admin.initializeApp({
+      adminApp = initializeApp({
         projectId
       });
     }
   } catch (err: any) {
     console.warn('Firebase Admin default initialization notice:', err?.message);
-    adminApp = admin.initializeApp({ projectId }, 'BreakthroughAdminFallback');
+    adminApp = initializeApp({ projectId }, 'BreakthroughAdminFallback');
   }
 
   return adminApp;
@@ -90,7 +93,8 @@ export async function verifyAuthToken(
 
   try {
     const app = getFirebaseAdminApp();
-    const decodedToken = await app.auth().verifyIdToken(token);
+    const adminAuth = getAuth(app);
+    const decodedToken = await adminAuth.verifyIdToken(token);
     const uid = decodedToken.uid;
     const email = decodedToken.email || '';
 
@@ -98,7 +102,8 @@ export async function verifyAuthToken(
     let role: UserRole = (decodedToken.role as UserRole) || 'PENDING';
 
     try {
-      const userDoc = await app.firestore().collection('users').doc(uid).get();
+      const adminDb = getFirestore(app);
+      const userDoc = await adminDb.collection('users').doc(uid).get();
       if (userDoc.exists) {
         const data = userDoc.data();
         if (data?.role) {

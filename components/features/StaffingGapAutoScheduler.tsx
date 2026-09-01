@@ -122,7 +122,7 @@ export const StaffingGapAutoScheduler: React.FC<StaffingGapAutoSchedulerProps> =
     });
 
     // Overcapacity practitioners
-    const overcapacityPracs = practitioners.filter((p) => (p.activeCaseloadCount || p.activeCaseload || 0) >= p.caseloadLimit);
+    const overcapacityPracs = practitioners.filter((p) => (p.activeCaseloadCount || p.activeCaseload || 0) >= (p.caseloadLimit || 25));
 
     const totalRequiredHours = clientGaps.reduce((sum, g) => sum + g.weeklyHoursRequired, 0);
     const totalScheduledHours = clientGaps.reduce((sum, g) => sum + g.scheduledHours, 0);
@@ -153,7 +153,7 @@ export const StaffingGapAutoScheduler: React.FC<StaffingGapAutoSchedulerProps> =
       // Find the best qualified practitioner with available headroom
       const candidatePracs = [...practitioners].filter((p) => {
         const active = p.activeCaseloadCount || p.activeCaseload || 0;
-        const availableSlots = p.caseloadLimit - active;
+        const availableSlots = (p.caseloadLimit || 25) - active;
         if (availableSlots <= 0) return false;
         if (p.screeningStatus === 'Expired') return false;
         if (gap.requiresAdvancedPBS && p.pbsRegistrationLevel === 'Core Practitioner') return false;

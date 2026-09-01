@@ -39,6 +39,10 @@ const SecurityAuditModule = lazy(() => import('@/components/features/SecurityAud
 const IntegrationsModule = lazy(() => import('@/components/features/IntegrationsModule').then(m => ({ default: m.IntegrationsModule })));
 const ParticipantPortalView = lazy(() => import('@/components/features/ParticipantPortalView').then(m => ({ default: m.ParticipantPortalView })));
 const AIPredictiveInsights = lazy(() => import('@/components/features/AIPredictiveInsights').then(m => ({ default: m.AIPredictiveInsights })));
+const ClinicalVoiceScribe = lazy(() => import('@/components/features/ClinicalVoiceScribe').then(m => ({ default: m.ClinicalVoiceScribe })));
+const DocumentIntelligenceModule = lazy(() => import('@/components/features/DocumentIntelligenceModule').then(m => ({ default: m.DocumentIntelligenceModule })));
+const AICaseloadRiskRadar = lazy(() => import('@/components/features/AICaseloadRiskRadar').then(m => ({ default: m.AICaseloadRiskRadar })));
+const AuditSimulatorModule = lazy(() => import('@/components/features/AuditSimulatorModule').then(m => ({ default: m.AuditSimulatorModule })));
 
 const ModuleLoadingFallback = ({ title }: { title: string }) => (
   <div className="flex flex-col items-center justify-center min-h-[360px] py-16 space-y-4 rounded-2xl bg-slate-900/30 border border-slate-800/50">
@@ -261,6 +265,18 @@ export default function Page() {
         );
       case 'participant-portal':
         return <ParticipantPortalView />;
+      case 'voice-scribe':
+        return <ClinicalVoiceScribe />;
+      case 'document-intelligence':
+        return <DocumentIntelligenceModule />;
+      case 'ai-radar':
+        return <AICaseloadRiskRadar />;
+      case 'audit-simulator':
+        return (
+          <AccessGuard requiredRoles={['ADMIN']} moduleName="NDIS Audit Simulator">
+            <AuditSimulatorModule />
+          </AccessGuard>
+        );
       case 'ai-predictive-insights':
         return <AIPredictiveInsights />;
       default:

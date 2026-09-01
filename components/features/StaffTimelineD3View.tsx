@@ -294,7 +294,8 @@ export const StaffTimelineD3View: React.FC<StaffTimelineD3ViewProps> = ({
       addNotification({
         title: 'Roster Publication Blocked',
         message: `Publication blocked due to ${schadsBatchValidation.blockedShiftsCount} statutory SCHADS Award or Credential Gating breaches.`,
-        type: 'ERROR'
+        type: 'hr',
+        severity: 'high'
       });
       return;
     }
@@ -303,18 +304,17 @@ export const StaffTimelineD3View: React.FC<StaffTimelineD3ViewProps> = ({
     setTimeout(() => {
       setIsPublishingRoster(false);
       setRosterPublishedSuccess(true);
-      addAuditLog({
-        userId: currentUser?.uid || 'user-admin',
-        userName: currentUser?.name || 'Practice Director',
-        action: 'SCHADS_ROSTER_PUBLISH',
-        resourceType: 'StaffRoster',
-        resourceId: `ROSTER-${selectedDate}`,
-        details: `Published roster for ${selectedDate} (${schadsShiftInputs.length} shifts, Estimated Payroll: $${schadsBatchValidation.totalEstimatedPayrollGross}) with 100% SCHADS and Screening verification.`
-      });
+      addAuditLog(
+        'PUBLISH',
+        'StaffRoster',
+        `ROSTER-${selectedDate}`,
+        `Published roster for ${selectedDate} (${schadsShiftInputs.length} shifts, Estimated Payroll: $${schadsBatchValidation.totalEstimatedPayrollGross}) with 100% SCHADS and Screening verification.`
+      );
       addNotification({
         title: 'Roster Published Successfully',
         message: `Roster for ${selectedDate} published with verified SCHADS Award compliance and credential gating.`,
-        type: 'SUCCESS'
+        type: 'hr',
+        severity: 'success'
       });
     }, 900);
   };
@@ -352,7 +352,7 @@ export const StaffTimelineD3View: React.FC<StaffTimelineD3ViewProps> = ({
     const yScale = d3.scaleBand().domain(pracIds).range([0, chartHeight]).padding(0.24);
 
     // 1. Grid Lines & Hourly Ticks
-    const timeTicks = xScale.ticks(d3.timeHour.every(1));
+    const timeTicks = xScale.ticks(d3.timeHour);
 
     // Vertical Background Grid Lines
     g.append('g')

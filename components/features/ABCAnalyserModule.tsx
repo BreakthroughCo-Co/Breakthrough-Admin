@@ -27,6 +27,7 @@ import {
   Compass,
   FileSpreadsheet
 } from 'lucide-react';
+import { BehaviorHeatmapView } from './BehaviorHeatmapView';
 
 export const ABCAnalyserModule: React.FC = () => {
   const { abcLogs, clients, currentUser, addABCLog, updateClient, addNotification, setActiveTab } = useManagementStore();
@@ -140,6 +141,9 @@ export const ABCAnalyserModule: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Interactive 24/7 PBS Behaviour Frequency & Antecedent Heatmap */}
+      <BehaviorHeatmapView />
 
       {/* AI Pattern Recognition & PBS Advisor Dashboard */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

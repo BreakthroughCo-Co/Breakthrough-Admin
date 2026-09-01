@@ -1,4 +1,4 @@
-import type { Client, ScheduledShift, ClientGoal, ParticipantChatbotQueryResult } from '../types/index.ts';
+import type { Client, ScheduledShift, ClientGoal, ParticipantChatbotQueryResult } from '@/types';
 
 export interface ParticipantChatbotContext {
   client?: Client | any;

@@ -188,13 +188,20 @@ await asyncCheck('3 concurrent tabs receive real-time updates for all 15 Firesto
     // Clean up Tab B subscription
     unsubB();
 
-    // Update from Tab C
-    const updatedDoc = { ...testDoc, updatedField: 'mutation-from-tab-c' };
-    await firestore.setDoc(name, testDoc.id, updatedDoc, tabC.getAuthContext());
+    // Update from Tab C (or append second record for append-only auditLogs)
+    if (name === 'auditLogs') {
+      const secondDoc = { id: 'audit-rt-2', action: 'LOGOUT', details: 'User logged out' };
+      await firestore.setDoc(name, secondDoc.id, secondDoc, tabC.getAuthContext());
+      assert(tabAReceived && tabAReceived.some(d => d.id === 'audit-rt-2'), `Tab A did not receive updated snapshot on '${name}'`);
+      assert(tabCReceived && tabCReceived.some(d => d.id === 'audit-rt-2'), `Tab C did not receive updated snapshot on '${name}'`);
+    } else {
+      const updatedDoc = { ...testDoc, updatedField: 'mutation-from-tab-c' };
+      await firestore.setDoc(name, testDoc.id, updatedDoc, tabC.getAuthContext());
 
-    // Tab A and C receive update; Tab B no longer receives updates
-    assert(tabAReceived && tabAReceived.find(d => d.id === testDoc.id)?.updatedField === 'mutation-from-tab-c', `Tab A did not receive updated snapshot on '${name}'`);
-    assert(tabCReceived && tabCReceived.find(d => d.id === testDoc.id)?.updatedField === 'mutation-from-tab-c', `Tab C did not receive updated snapshot on '${name}'`);
+      // Tab A and C receive update; Tab B no longer receives updates
+      assert(tabAReceived && tabAReceived.find(d => d.id === testDoc.id)?.updatedField === 'mutation-from-tab-c', `Tab A did not receive updated snapshot on '${name}'`);
+      assert(tabCReceived && tabCReceived.find(d => d.id === testDoc.id)?.updatedField === 'mutation-from-tab-c', `Tab C did not receive updated snapshot on '${name}'`);
+    }
 
     unsubA();
     unsubC();

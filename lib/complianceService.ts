@@ -36,8 +36,8 @@ import {
   ABCLog,
   Practitioner,
   BillingClaim
-} from '../types/index.ts';
-import { NotificationService } from './notificationService.ts';
+} from '@/types';
+import { NotificationService } from './notificationService';
 
 // =========================================================================
 // R12(a): AUTOMATED MONTHLY COMPLIANCE PDF REPORT GENERATION & AUTO-EMAIL
@@ -394,9 +394,9 @@ export function generateRestrictivePracticesCommissionReport(
     <ProviderName>Breakthrough Coaching &amp; Consulting</ProviderName>
     <ReportingPeriod>${report.reportingPeriod}</ReportingPeriod>
     <GeneratedTimestamp>${report.generatedAt}</GeneratedTimestamp>
-    <TotalActivePractices>${report.summary.totalActivePractices}</TotalActivePractices>
-    <AuthorizedPracticesCount>${report.summary.authorizedCount}</AuthorizedPracticesCount>
-    <UnauthorizedEmergencyCount>${report.summary.unauthorizedEmergencyCount}</UnauthorizedEmergencyCount>
+    <TotalActivePractices>${report.summary?.totalActivePractices ?? 0}</TotalActivePractices>
+    <AuthorizedPracticesCount>${report.summary?.authorizedCount ?? 0}</AuthorizedPracticesCount>
+    <UnauthorizedEmergencyCount>${report.summary?.unauthorizedEmergencyCount ?? 0}</UnauthorizedEmergencyCount>
   </SubmissionHeader>
   <RestrictivePracticesEntries>
     ${report.extractedPractices.map(p => `

@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchPolicyKnowledge, auditCaseNoteAgainstSOPs, COMPANY_SOP_REGISTRY } from '@/lib/policyKnowledgeService';
+import { requireAuth } from '@/lib/auth/verifySession';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
+  const authResult = await requireAuth(req, ['ADMIN', 'PRACTITIONER', 'SUPPORT_COORDINATOR', 'VIEWER']);
+  if ('errorResponse' in authResult) {
+    return authResult.errorResponse;
+  }
+
   const { searchParams } = new URL(req.url);
   const query = searchParams.get('q') || '';
   const results = searchPolicyKnowledge(query);
@@ -17,6 +23,11 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireAuth(req, ['ADMIN', 'PRACTITIONER', 'SUPPORT_COORDINATOR']);
+  if ('errorResponse' in authResult) {
+    return authResult.errorResponse;
+  }
+
   try {
     const body = await req.json();
     if (body.action === 'audit_note' && body.caseNote) {

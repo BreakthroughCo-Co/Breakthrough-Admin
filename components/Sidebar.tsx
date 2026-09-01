@@ -60,6 +60,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
       title: 'Operations & Control',
       items: [
         { id: 'command-center', label: 'Command Center', icon: LayoutDashboard },
+        { id: 'voice-scribe', label: 'Clinical Voice Scribe', icon: Sparkles, badge: 'SPEECH', highlight: true },
         { id: 'participant-portal', label: 'Participant & Carer Portal', icon: HeartHandshake, badge: 'PORTAL' },
         { id: 'clients', label: 'NDIS Participants', icon: Users },
         { id: 'ndis-goals', label: 'NDIS Goal Tracker', icon: Target, badge: 'NEW' },
@@ -71,6 +72,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
     {
       title: 'Clinical Practice & BSP',
       items: [
+        { id: 'document-intelligence', label: 'Document Intelligence', icon: BrainCircuit, badge: 'OCR', highlight: true },
+        { id: 'ai-radar', label: 'Caseload Risk Radar', icon: BrainCircuit, badge: 'RADAR' },
         { id: 'restrictive-practices', label: 'Restrictive Practices', icon: Lock, highlight: true },
         { id: 'abc-analyser', label: 'ABC Behaviour Analyser', icon: BarChart3 },
         { id: 'bsp-plans', label: 'BSP Plans & Generator', icon: FileSpreadsheet },
@@ -84,6 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         { id: 'google-classroom', label: 'Google Classroom', icon: GraduationCap, highlight: true, badge: 'ACADEMY' },
         { id: 'google-keep', label: 'Google Keep Notes', icon: StickyNote, highlight: true, badge: 'KEEP' },
         { id: 'ai-predictive-insights', label: 'AI Predictive Insights', icon: BrainCircuit, badge: 'AI' },
+        { id: 'audit-simulator', label: 'NDIS Audit Simulator', icon: Award, badge: 'INSPECTOR', highlight: true },
         { id: 'audit', label: 'Compliance Dashboard', icon: Award, highlight: true },
         { id: 'crm', label: 'Intake & CRM Leads', icon: UserPlus },
         { id: 'billing', label: 'NDIS Billing Claims', icon: Receipt },

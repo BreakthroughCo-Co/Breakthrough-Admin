@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const sendgridApiKey = process.env.SENDGRID_API_KEY || 'SG.sandbox_dummy_key';
     const messageId = `sg-msg-${crypto.randomUUID()}`;
 
     // Return standardized 202 Accepted response for transactional dispatch

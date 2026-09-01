@@ -503,7 +503,7 @@ export function searchCrossModuleIndex({
 
       if (nl.isABCIntent) score += 35;
 
-      const clientScore = calculateFuzzyScore(abc.clientName, cleanQuery, 1.2);
+      const clientScore = calculateFuzzyScore(abc.clientName || '', cleanQuery, 1.2);
       const antScore = calculateFuzzyScore(abc.antecedent || '', cleanQuery, 1.1);
       const behScore = calculateFuzzyScore(abc.behavior || '', cleanQuery, 1.1);
       const conScore = calculateFuzzyScore(abc.consequence || '', cleanQuery, 0.9);

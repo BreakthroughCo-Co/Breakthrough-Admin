@@ -142,6 +142,10 @@ export const createComplianceSlice: StateCreator<RootStore, [], [], ComplianceSl
   },
 
   updateBspDocument: (id, updates) => {
+    get().updateBSPDocument(id, updates);
+  },
+
+  updateBSPDocument: (id, updates) => {
     const lastUpdated = new Date().toISOString();
     set((state) => ({
       bspDocuments: state.bspDocuments.map((d) => (d.id === id ? { ...d, ...updates, lastUpdated } : d)),
@@ -151,7 +155,7 @@ export const createComplianceSlice: StateCreator<RootStore, [], [], ComplianceSl
     get().addAuditLog('UPDATE', 'BSPDocument', id, `Updated Behaviour Support Plan`);
 
     updateBSPDocumentDoc(id, updates).catch((err) => {
-      console.warn('Firestore write failed for updateBspDocument, queueing offline:', err);
+      console.warn('Firestore write failed for updateBSPDocument, queueing offline:', err);
       get().queueOfflineDelta('UPDATE', 'BSPDocument', id, updates);
     });
   },

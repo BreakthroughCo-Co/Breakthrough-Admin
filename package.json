@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev -p 3000 -H 0.0.0.0",
     "build": "next build",
-    "start": "node server.ts",
+    "start": "next start -p 3000 -H 0.0.0.0",
     "test": "node tests/runner.mjs",
     "lint": "next lint"
   },

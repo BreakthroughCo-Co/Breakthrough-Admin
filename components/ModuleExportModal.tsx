@@ -45,7 +45,11 @@ const MODULE_TITLES: Record<TabType, string> = {
   'integrations': 'Cloud Integrations & Synchronization Health',
   'google-classroom': 'Workforce Training & Competency Modules',
   'participant-portal': 'NDIS Participant Portal & Care Plan Summary',
-  'ai-predictive-insights': 'AI Predictive Insights & Clinical Intelligence'
+  'ai-predictive-insights': 'AI Predictive Insights & Clinical Intelligence',
+  'document-intelligence': 'Clinical Document Intelligence & OCR Intake',
+  'voice-scribe': 'AI Ambient Clinical Voice Scribe & SOAP Records',
+  'ai-radar': 'AI Caseload Risk & Crisis Early Warning Radar',
+  'audit-simulator': 'NDIS Commission Practice Standards Audit Simulator'
 };
 
 export const ModuleExportModal: React.FC<ModuleExportModalProps> = ({

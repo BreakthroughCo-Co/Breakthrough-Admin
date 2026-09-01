@@ -31,6 +31,7 @@ import {
 
 import { GoalProgressChart } from './GoalProgressChart';
 import { SignaturePad } from './SignaturePad';
+import { ClinicalVoiceScribe } from './ClinicalVoiceScribe';
 
 type SoapField = 'subjective' | 'objective' | 'assessment' | 'plan';
 type DictationMode = 'FIELD' | 'FULL_STREAM';
@@ -59,6 +60,7 @@ export const CaseNotesModule: React.FC = () => {
   const [autoGenerateClaim, setAutoGenerateClaim] = useState(true);
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [isExportPDFOpen, setIsExportPDFOpen] = useState(false);
+  const [isVoiceScribeOpen, setIsVoiceScribeOpen] = useState(false);
 
   const selectedClientObj = clients.find((c: Client) => c.id === selectedClient);
 
@@ -455,7 +457,7 @@ ${rawText}`;
               }
             : g
         );
-        useManagementStore.getState().updateClient({ ...selectedClientObj, goals: updatedGoals });
+        useManagementStore.getState().updateClient(selectedClientObj.id, { goals: updatedGoals });
       }
     });
     setGoalGasScores({});
@@ -525,6 +527,16 @@ ${rawText}`;
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsVoiceScribeOpen(true)}
+            className="px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-teal-600 hover:from-indigo-500 hover:to-teal-500 text-white font-bold text-xs rounded-lg flex items-center gap-2 transition-all shadow-md cursor-pointer"
+            title="Open AI Ambient Clinical Voice Scribe for speech-to-SOAP note generation"
+          >
+            <Mic className="w-4 h-4" />
+            <span>Ambient Voice Scribe</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setIsExportPDFOpen(true)}
@@ -1195,6 +1207,26 @@ ${rawText}`;
         clients={clients}
         initialClientId={selectedClient}
       />
+
+      {/* AI Ambient Voice Scribe Modal */}
+      {isVoiceScribeOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+          <div className="max-w-3xl w-full">
+            <ClinicalVoiceScribe
+              selectedClient={selectedClientObj}
+              onClose={() => setIsVoiceScribeOpen(false)}
+              onApplySoapNote={(soap) => {
+                setSubjective(soap.subjective);
+                setObjective(soap.objective);
+                setAssessment(soap.assessment);
+                setPlan(soap.plan);
+                setSessionDuration(soap.durationMinutes);
+                setIsVoiceScribeOpen(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

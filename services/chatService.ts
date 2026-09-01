@@ -7,7 +7,49 @@ interface ChatMessage {
   timestamp: string;
 }
 
-const sessionStore = new Map<string, ChatMessage[]>();
+interface StoredSession {
+  messages: ChatMessage[];
+  lastAccessed: number;
+}
+
+const MAX_SESSIONS = 500;
+const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+const sessionStore = new Map<string, StoredSession>();
+
+function getSessionMessages(sessionId: string): ChatMessage[] {
+  const now = Date.now();
+  const session = sessionStore.get(sessionId);
+  if (!session) return [];
+  if (now - session.lastAccessed > SESSION_TTL_MS) {
+    sessionStore.delete(sessionId);
+    return [];
+  }
+  session.lastAccessed = now;
+  return session.messages;
+}
+
+function saveSessionMessages(sessionId: string, messages: ChatMessage[]): void {
+  const now = Date.now();
+  // Evict expired sessions if map exceeds capacity
+  if (sessionStore.size >= MAX_SESSIONS) {
+    for (const [id, s] of sessionStore.entries()) {
+      if (now - s.lastAccessed > SESSION_TTL_MS) {
+        sessionStore.delete(id);
+      }
+    }
+    // If still at capacity, evict the oldest session
+    if (sessionStore.size >= MAX_SESSIONS) {
+      const oldestKey = sessionStore.keys().next().value;
+      if (oldestKey) sessionStore.delete(oldestKey);
+    }
+  }
+
+  sessionStore.set(sessionId, {
+    messages: messages.slice(-20),
+    lastAccessed: now
+  });
+}
 
 const SYSTEM_INSTRUCTION = `You are the AI Operating Assistant for Breakthrough Coaching & Consulting, an authorized NDIS service provider.
 Your capabilities include:
@@ -22,7 +64,7 @@ Respond professionally, concisely, and provide actionable NDIS-compliant guidanc
  * Process a conversational chat turn for a given sessionId and user message.
  */
 export async function processChatTurn(sessionId: string = 'default-user', message: string): Promise<string> {
-  const sessionHistory = sessionStore.get(sessionId) || [];
+  const sessionHistory = getSessionMessages(sessionId);
 
   // Append user message
   sessionHistory.push({
@@ -40,7 +82,7 @@ export async function processChatTurn(sessionId: string = 'default-user', messag
       text: fallbackResponse,
       timestamp: new Date().toISOString(),
     });
-    sessionStore.set(sessionId, sessionHistory.slice(-20));
+    saveSessionMessages(sessionId, sessionHistory);
     return fallbackResponse;
   }
 
@@ -76,8 +118,7 @@ export async function processChatTurn(sessionId: string = 'default-user', messag
       timestamp: new Date().toISOString(),
     });
 
-    // Keep the last 20 messages to prevent memory bloat
-    sessionStore.set(sessionId, sessionHistory.slice(-20));
+    saveSessionMessages(sessionId, sessionHistory);
 
     return replyText;
   } catch (error: any) {
@@ -111,7 +152,7 @@ export async function processChatTurn(sessionId: string = 'default-user', messag
       text: replyText,
       timestamp: new Date().toISOString(),
     });
-    sessionStore.set(sessionId, sessionHistory.slice(-20));
+    saveSessionMessages(sessionId, sessionHistory);
     return replyText;
   }
 }
@@ -121,4 +162,11 @@ export async function processChatTurn(sessionId: string = 'default-user', messag
  */
 export function clearSession(sessionId: string): void {
   sessionStore.delete(sessionId);
+}
+
+/**
+ * Get count of active stored sessions (for telemetry / testing)
+ */
+export function getStoredSessionCount(): number {
+  return sessionStore.size;
 }

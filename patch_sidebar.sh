@@ -1,1 +1,0 @@
-sed -i 's/{ id: '\''audit'\'', label: '\''Compliance Dashboard'\''/{ id: '\''ai-predictive-insights'\'', label: '\''AI Predictive Insights'\'', icon: BrainCircuit, badge: '\''AI'\'' },\n        { id: '\''audit'\'', label: '\''Compliance Dashboard'\''/g' components/Sidebar.tsx

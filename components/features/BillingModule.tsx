@@ -9,6 +9,7 @@ import { NDISPricingSyncEngine } from '@/lib/ndisPricingService';
 import { ProdaBatchModal } from './ProdaBatchModal';
 import { FinancialControl } from './FinancialControl';
 import { BillingInsightsPanel } from './BillingInsightsPanel';
+import { PACEClaimAutoFixer } from './PACEClaimAutoFixer';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -1016,7 +1017,8 @@ export const BillingModule: React.FC = () => {
         </div>
       </div>
 
-      {/* Validation Batch Audit Summary Alert */}
+      {/* AI PACE & PRODA Intelligent Claim Auto-Fixer */}
+      <PACEClaimAutoFixer />
       {validationBatchSummary && (
         <div className="p-3.5 bg-purple-950/30 border border-purple-500/30 rounded-xl flex items-center justify-between gap-3 text-xs font-mono">
           <div className="flex items-center gap-2 text-purple-300">

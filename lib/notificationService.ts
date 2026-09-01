@@ -13,7 +13,7 @@
  * 4. Audit ledger & delivery receipt tracking
  */
 
-import type { Incident, Practitioner, Client, BSPDocument, BillingClaim, UserProfile } from '../types/index.ts';
+import type { Incident, Practitioner, Client, BSPDocument, BillingClaim, UserProfile } from '@/types';
 
 export type NotificationTriggerType =
   | 'CRITICAL_INCIDENT'
