@@ -43,6 +43,11 @@ const ClinicalVoiceScribe = lazy(() => import('@/components/features/ClinicalVoi
 const DocumentIntelligenceModule = lazy(() => import('@/components/features/DocumentIntelligenceModule').then(m => ({ default: m.DocumentIntelligenceModule })));
 const AICaseloadRiskRadar = lazy(() => import('@/components/features/AICaseloadRiskRadar').then(m => ({ default: m.AICaseloadRiskRadar })));
 const AuditSimulatorModule = lazy(() => import('@/components/features/AuditSimulatorModule').then(m => ({ default: m.AuditSimulatorModule })));
+const DirectPRODAClaimConnector = lazy(() => import('@/components/features/DirectPRODAClaimConnector').then(m => ({ default: m.DirectPRODAClaimConnector })));
+const PlanReassessmentReportWriter = lazy(() => import('@/components/features/PlanReassessmentReportWriter').then(m => ({ default: m.PlanReassessmentReportWriter })));
+const ParticipantChurnRadar = lazy(() => import('@/components/features/ParticipantChurnRadar').then(m => ({ default: m.ParticipantChurnRadar })));
+const ServiceAgreementSigningPortal = lazy(() => import('@/components/features/ServiceAgreementSigningPortal').then(m => ({ default: m.ServiceAgreementSigningPortal })));
+const TelehealthRoom = lazy(() => import('@/components/features/TelehealthRoom').then(m => ({ default: m.TelehealthRoom })));
 
 const ModuleLoadingFallback = ({ title }: { title: string }) => (
   <div className="flex flex-col items-center justify-center min-h-[360px] py-16 space-y-4 rounded-2xl bg-slate-900/30 border border-slate-800/50">
@@ -279,6 +284,20 @@ export default function Page() {
         );
       case 'ai-predictive-insights':
         return <AIPredictiveInsights />;
+      case 'proda-gateway':
+        return (
+          <AccessGuard requiredRoles={['ADMIN']} moduleName="PRODA Direct Gateway">
+            <DirectPRODAClaimConnector />
+          </AccessGuard>
+        );
+      case 'plan-report-writer':
+        return <PlanReassessmentReportWriter />;
+      case 'churn-radar':
+        return <ParticipantChurnRadar />;
+      case 'agreements-signing':
+        return <ServiceAgreementSigningPortal />;
+      case 'telehealth':
+        return <TelehealthRoom />;
       default:
         if (currentUser?.role === 'PARTICIPANT') {
           return <ParticipantPortalView />;

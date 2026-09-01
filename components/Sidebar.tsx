@@ -24,6 +24,10 @@ import {
   GraduationCap,
   Target,
   HeartHandshake,
+  Video,
+  FileSignature,
+  Send,
+  UserX,
   X
 } from 'lucide-react';
 
@@ -60,6 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
       title: 'Operations & Control',
       items: [
         { id: 'command-center', label: 'Command Center', icon: LayoutDashboard },
+        { id: 'telehealth', label: 'Telehealth Consults', icon: Video, badge: 'WEBRTC', highlight: true },
         { id: 'voice-scribe', label: 'Clinical Voice Scribe', icon: Sparkles, badge: 'SPEECH', highlight: true },
         { id: 'participant-portal', label: 'Participant & Carer Portal', icon: HeartHandshake, badge: 'PORTAL' },
         { id: 'clients', label: 'NDIS Participants', icon: Users },
@@ -72,8 +77,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
     {
       title: 'Clinical Practice & BSP',
       items: [
+        { id: 'plan-report-writer', label: 'Plan Reassessment Writer', icon: FileText, badge: 'REPORT', highlight: true },
         { id: 'document-intelligence', label: 'Document Intelligence', icon: BrainCircuit, badge: 'OCR', highlight: true },
         { id: 'ai-radar', label: 'Caseload Risk Radar', icon: BrainCircuit, badge: 'RADAR' },
+        { id: 'churn-radar', label: 'Retention & Churn Radar', icon: UserX, badge: 'ML' },
         { id: 'restrictive-practices', label: 'Restrictive Practices', icon: Lock, highlight: true },
         { id: 'abc-analyser', label: 'ABC Behaviour Analyser', icon: BarChart3 },
         { id: 'bsp-plans', label: 'BSP Plans & Generator', icon: FileSpreadsheet },
@@ -83,6 +90,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
     {
       title: 'Business & Governance',
       items: [
+        { id: 'proda-gateway', label: 'PRODA Direct Gateway', icon: Send, badge: 'B2G', adminOnly: true, highlight: true },
+        { id: 'agreements-signing', label: 'E-Signature Portal', icon: FileSignature, badge: 'SHA-256' },
         { id: 'google-workspace', label: 'Google Workspace Hub', icon: Globe, highlight: true, badge: 'OAUTH' },
         { id: 'google-classroom', label: 'Google Classroom', icon: GraduationCap, highlight: true, badge: 'ACADEMY' },
         { id: 'google-keep', label: 'Google Keep Notes', icon: StickyNote, highlight: true, badge: 'KEEP' },

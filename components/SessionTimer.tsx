@@ -43,7 +43,12 @@ const TAB_NAME_MAP: Record<TabType, string> = {
   'document-intelligence': 'Document Intelligence & OCR',
   'voice-scribe': 'Clinical Voice Scribe',
   'ai-radar': 'Caseload Risk Radar',
-  'audit-simulator': 'NDIS Audit Simulator'
+  'audit-simulator': 'NDIS Audit Simulator',
+  'proda-gateway': 'PRODA Direct Gateway',
+  'plan-report-writer': 'Plan Report Writer',
+  'churn-radar': 'Retention & Churn Radar',
+  'agreements-signing': 'E-Signature Portal',
+  'telehealth': 'Telehealth Consult Suite'
 };
 
 const STORAGE_KEY = 'breakthrough_session_timer_state_v1';

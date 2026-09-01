@@ -49,7 +49,12 @@ const MODULE_TITLES: Record<TabType, string> = {
   'document-intelligence': 'Clinical Document Intelligence & OCR Intake',
   'voice-scribe': 'AI Ambient Clinical Voice Scribe & SOAP Records',
   'ai-radar': 'AI Caseload Risk & Crisis Early Warning Radar',
-  'audit-simulator': 'NDIS Commission Practice Standards Audit Simulator'
+  'audit-simulator': 'NDIS Commission Practice Standards Audit Simulator',
+  'proda-gateway': 'PRODA B2G Direct Gateway & Claim Adjudication',
+  'plan-report-writer': 'NDIS 12-Month Plan Reassessment Dossier Writer',
+  'churn-radar': 'Participant Retention & Churn Risk Radar',
+  'agreements-signing': 'Cryptographic Service Agreement & E-Signature Portal',
+  'telehealth': 'Encrypted Telehealth & Consultation Suite'
 };
 
 export const ModuleExportModal: React.FC<ModuleExportModalProps> = ({
