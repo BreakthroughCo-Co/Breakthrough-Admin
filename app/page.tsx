@@ -48,6 +48,11 @@ const PlanReassessmentReportWriter = lazy(() => import('@/components/features/Pl
 const ParticipantChurnRadar = lazy(() => import('@/components/features/ParticipantChurnRadar').then(m => ({ default: m.ParticipantChurnRadar })));
 const ServiceAgreementSigningPortal = lazy(() => import('@/components/features/ServiceAgreementSigningPortal').then(m => ({ default: m.ServiceAgreementSigningPortal })));
 const TelehealthRoom = lazy(() => import('@/components/features/TelehealthRoom').then(m => ({ default: m.TelehealthRoom })));
+const ClinicalSupervisorDashboard = lazy(() => import('@/components/features/ClinicalSupervisorDashboard').then(m => ({ default: m.ClinicalSupervisorDashboard })));
+const BigQueryAnalyticsHub = lazy(() => import('@/components/features/BigQueryAnalyticsHub').then(m => ({ default: m.BigQueryAnalyticsHub })));
+const ClinicalBenchmarkingMatrix = lazy(() => import('@/components/features/ClinicalBenchmarkingMatrix').then(m => ({ default: m.ClinicalBenchmarkingMatrix })));
+const CarerFamilyHub = lazy(() => import('@/components/features/CarerFamilyHub').then(m => ({ default: m.CarerFamilyHub })));
+const GamifiedGoalTracker = lazy(() => import('@/components/features/GamifiedGoalTracker').then(m => ({ default: m.GamifiedGoalTracker })));
 
 const ModuleLoadingFallback = ({ title }: { title: string }) => (
   <div className="flex flex-col items-center justify-center min-h-[360px] py-16 space-y-4 rounded-2xl bg-slate-900/30 border border-slate-800/50">
@@ -298,6 +303,20 @@ export default function Page() {
         return <ServiceAgreementSigningPortal />;
       case 'telehealth':
         return <TelehealthRoom />;
+      case 'clinical-supervisor':
+        return <ClinicalSupervisorDashboard />;
+      case 'bigquery-analytics':
+        return (
+          <AccessGuard requiredRoles={['ADMIN']} moduleName="BigQuery Data Warehouse">
+            <BigQueryAnalyticsHub />
+          </AccessGuard>
+        );
+      case 'clinical-benchmarks':
+        return <ClinicalBenchmarkingMatrix />;
+      case 'carer-family-hub':
+        return <CarerFamilyHub />;
+      case 'gamified-goals':
+        return <GamifiedGoalTracker />;
       default:
         if (currentUser?.role === 'PARTICIPANT') {
           return <ParticipantPortalView />;

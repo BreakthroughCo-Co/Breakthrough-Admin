@@ -28,6 +28,8 @@ import {
   FileSignature,
   Send,
   UserX,
+  Database,
+  Trophy,
   X
 } from 'lucide-react';
 
@@ -67,6 +69,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         { id: 'telehealth', label: 'Telehealth Consults', icon: Video, badge: 'WEBRTC', highlight: true },
         { id: 'voice-scribe', label: 'Clinical Voice Scribe', icon: Sparkles, badge: 'SPEECH', highlight: true },
         { id: 'participant-portal', label: 'Participant & Carer Portal', icon: HeartHandshake, badge: 'PORTAL' },
+        { id: 'carer-family-hub', label: 'Carer & Family Hub', icon: HeartHandshake, badge: 'FAMILY' },
+        { id: 'gamified-goals', label: 'Milestone Rewards', icon: Trophy, badge: 'GAS +2' },
         { id: 'clients', label: 'NDIS Participants', icon: Users },
         { id: 'ndis-goals', label: 'NDIS Goal Tracker', icon: Target, badge: 'NEW' },
         { id: 'google-maps', label: 'Google Maps Routing', icon: MapPin, badge: 'MMM' },
@@ -77,6 +81,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
     {
       title: 'Clinical Practice & BSP',
       items: [
+        { id: 'clinical-supervisor', label: 'Clinical Supervisor', icon: Award, badge: 'AUDITOR', highlight: true },
+        { id: 'clinical-benchmarks', label: 'NDIA Benchmarks', icon: Award, badge: 'SECTOR' },
         { id: 'plan-report-writer', label: 'Plan Reassessment Writer', icon: FileText, badge: 'REPORT', highlight: true },
         { id: 'document-intelligence', label: 'Document Intelligence', icon: BrainCircuit, badge: 'OCR', highlight: true },
         { id: 'ai-radar', label: 'Caseload Risk Radar', icon: BrainCircuit, badge: 'RADAR' },
@@ -90,6 +96,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
     {
       title: 'Business & Governance',
       items: [
+        { id: 'bigquery-analytics', label: 'BigQuery Warehouse', icon: Database, badge: 'DW', adminOnly: true, highlight: true },
         { id: 'proda-gateway', label: 'PRODA Direct Gateway', icon: Send, badge: 'B2G', adminOnly: true, highlight: true },
         { id: 'agreements-signing', label: 'E-Signature Portal', icon: FileSignature, badge: 'SHA-256' },
         { id: 'google-workspace', label: 'Google Workspace Hub', icon: Globe, highlight: true, badge: 'OAUTH' },

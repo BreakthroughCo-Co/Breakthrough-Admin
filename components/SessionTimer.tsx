@@ -48,7 +48,12 @@ const TAB_NAME_MAP: Record<TabType, string> = {
   'plan-report-writer': 'Plan Report Writer',
   'churn-radar': 'Retention & Churn Radar',
   'agreements-signing': 'E-Signature Portal',
-  'telehealth': 'Telehealth Consult Suite'
+  'telehealth': 'Telehealth Consult Suite',
+  'clinical-supervisor': 'Clinical Supervisor',
+  'bigquery-analytics': 'BigQuery Analytics',
+  'clinical-benchmarks': 'NDIA Benchmarks',
+  'carer-family-hub': 'Carer & Family Hub',
+  'gamified-goals': 'Milestone Rewards'
 };
 
 const STORAGE_KEY = 'breakthrough_session_timer_state_v1';

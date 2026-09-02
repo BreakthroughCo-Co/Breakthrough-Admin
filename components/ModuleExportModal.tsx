@@ -54,7 +54,12 @@ const MODULE_TITLES: Record<TabType, string> = {
   'plan-report-writer': 'NDIS 12-Month Plan Reassessment Dossier Writer',
   'churn-radar': 'Participant Retention & Churn Risk Radar',
   'agreements-signing': 'Cryptographic Service Agreement & E-Signature Portal',
-  'telehealth': 'Encrypted Telehealth & Consultation Suite'
+  'telehealth': 'Encrypted Telehealth & Consultation Suite',
+  'clinical-supervisor': 'Autonomous Clinical Supervisor & Note Quality Review',
+  'bigquery-analytics': 'BigQuery Enterprise Analytics & Streaming Hub',
+  'clinical-benchmarks': 'National NDIA Clinical Efficacy Benchmark Matrix',
+  'carer-family-hub': 'Carer Delegation & Multi-Participant Family Hub',
+  'gamified-goals': 'Participant Milestone & Gamified Goal Tracker'
 };
 
 export const ModuleExportModal: React.FC<ModuleExportModalProps> = ({
