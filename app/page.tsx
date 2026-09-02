@@ -66,6 +66,11 @@ const SensoryEnvironmentAnalyzerModule = lazy(() => import('@/components/feature
 const PeerSupervisionNetworkModule = lazy(() => import('@/components/features/PeerSupervisionNetworkModule').then(m => ({ default: m.PeerSupervisionNetworkModule })));
 const FHIRGatewayModule = lazy(() => import('@/components/features/FHIRGatewayModule').then(m => ({ default: m.FHIRGatewayModule })));
 const BudgetRolloverForecasterModule = lazy(() => import('@/components/features/BudgetRolloverForecasterModule').then(m => ({ default: m.BudgetRolloverForecasterModule })));
+const ClinicalOutcomeSuiteModule = lazy(() => import('@/components/features/ClinicalOutcomeSuiteModule').then(m => ({ default: m.ClinicalOutcomeSuiteModule })));
+const FeedbackSentimentPulseModule = lazy(() => import('@/components/features/FeedbackSentimentPulseModule').then(m => ({ default: m.FeedbackSentimentPulseModule })));
+const AudioTranscriptionVaultModule = lazy(() => import('@/components/features/AudioTranscriptionVaultModule').then(m => ({ default: m.AudioTranscriptionVaultModule })));
+const PriceIndexationEngineModule = lazy(() => import('@/components/features/PriceIndexationEngineModule').then(m => ({ default: m.PriceIndexationEngineModule })));
+const DisasterRecoveryVaultModule = lazy(() => import('@/components/features/DisasterRecoveryVaultModule').then(m => ({ default: m.DisasterRecoveryVaultModule })));
 
 const ModuleLoadingFallback = ({ title }: { title: string }) => (
   <div className="flex flex-col items-center justify-center min-h-[360px] py-16 space-y-4 rounded-2xl bg-slate-900/30 border border-slate-800/50">
@@ -372,6 +377,24 @@ export default function Page() {
         );
       case 'budget-forecaster':
         return <BudgetRolloverForecasterModule />;
+      case 'outcome-suite':
+        return <ClinicalOutcomeSuiteModule />;
+      case 'feedback-pulse':
+        return <FeedbackSentimentPulseModule />;
+      case 'audio-vault':
+        return <AudioTranscriptionVaultModule />;
+      case 'price-indexation':
+        return (
+          <AccessGuard requiredRoles={['ADMIN']} moduleName="NDIS Price Indexation">
+            <PriceIndexationEngineModule />
+          </AccessGuard>
+        );
+      case 'disaster-recovery':
+        return (
+          <AccessGuard requiredRoles={['ADMIN']} moduleName="Disaster Recovery Vault">
+            <DisasterRecoveryVaultModule />
+          </AccessGuard>
+        );
       default:
         if (currentUser?.role === 'PARTICIPANT') {
           return <ParticipantPortalView />;

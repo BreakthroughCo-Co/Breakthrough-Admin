@@ -42,6 +42,10 @@ import {
   Users2,
   Home,
   Zap,
+  Heart,
+  Mic,
+  Percent,
+  HardDrive,
   X
 } from 'lucide-react';
 
@@ -82,6 +86,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         { id: 'lone-worker-safety', label: 'Lone Worker Field SOS', icon: Radio, badge: 'SOS', highlight: true },
         { id: 'telehealth', label: 'Telehealth Consults', icon: Video, badge: 'WEBRTC', highlight: true },
         { id: 'voice-scribe', label: 'Clinical Voice Scribe', icon: Sparkles, badge: 'SPEECH', highlight: true },
+        { id: 'feedback-pulse', label: 'Participant Feedback Pulse', icon: Heart, badge: 'NPS' },
+        { id: 'audio-vault', label: 'Session Audio Vault', icon: Mic, badge: 'ENCRYPTED' },
         { id: 'travel-allowance', label: 'MMM Travel Calculator', icon: Car, badge: 'MMM 1-7' },
         { id: 'participant-portal', label: 'Participant & Carer Portal', icon: HeartHandshake, badge: 'PORTAL' },
         { id: 'carer-family-hub', label: 'Carer & Family Hub', icon: HeartHandshake, badge: 'FAMILY' },
@@ -97,6 +103,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
     {
       title: 'Clinical Practice & BSP',
       items: [
+        { id: 'outcome-suite', label: 'GAS & Outcome Suite', icon: Target, badge: 'GAS +2', highlight: true },
         { id: 'crisis-escalation', label: 'Crisis Escalation Hub', icon: BellRing, badge: '24HR', highlight: true },
         { id: 'clinical-supervisor', label: 'Clinical Supervisor', icon: Award, badge: 'AUDITOR', highlight: true },
         { id: 'clinical-benchmarks', label: 'NDIA Benchmarks', icon: Award, badge: 'SECTOR' },
@@ -116,6 +123,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
     {
       title: 'Business & Governance',
       items: [
+        { id: 'price-indexation', label: 'Annual Rate Indexation', icon: Percent, badge: 'CPI', adminOnly: true },
+        { id: 'disaster-recovery', label: 'Disaster Recovery Vault', icon: HardDrive, badge: 'AES-256', adminOnly: true },
         { id: 'annual-compliance-return', label: 'NDIS Annual Return', icon: FileCheck2, badge: '73ZM', adminOnly: true, highlight: true },
         { id: 'credential-vault', label: 'Worker Screening (NWSC)', icon: Award, badge: 'NWSC', adminOnly: true },
         { id: 'schads-fatigue', label: 'SCHADS Fatigue & Overtime', icon: Activity, badge: 'AWARD', adminOnly: true },

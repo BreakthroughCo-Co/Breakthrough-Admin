@@ -72,7 +72,12 @@ const MODULE_TITLES: Record<TabType, string> = {
   'sensory-audit': 'Sensory Environment & Home Modification Audit',
   'peer-supervision': 'Practitioner Peer Supervision & Reflective Practice',
   'fhir-gateway': 'HL7 FHIR R4 Healthcare Interoperability Gateway',
-  'budget-forecaster': 'Multi-Year Plan Budget Burn & Rollover Forecaster'
+  'budget-forecaster': 'Multi-Year Plan Budget Burn & Rollover Forecaster',
+  'outcome-suite': 'Standardized Clinical Outcome Suite (GAS / HoNOS / WHODAS 2.0)',
+  'feedback-pulse': 'Participant & Family Feedback Sentiment Pulse',
+  'audio-vault': 'Clinical Session Audio & Multi-Speaker Transcription Vault',
+  'price-indexation': 'NDIS Annual Price Guide Indexation & Rate Escalation',
+  'disaster-recovery': 'Disaster Recovery & Encrypted Backup Snapshot Vault'
 };
 
 export const ModuleExportModal: React.FC<ModuleExportModalProps> = ({

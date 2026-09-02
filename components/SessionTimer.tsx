@@ -66,7 +66,12 @@ const TAB_NAME_MAP: Record<TabType, string> = {
   'sensory-audit': 'Sensory Audit',
   'peer-supervision': 'Supervision Log',
   'fhir-gateway': 'FHIR Interop Hub',
-  'budget-forecaster': 'Plan Forecaster'
+  'budget-forecaster': 'Plan Forecaster',
+  'outcome-suite': 'Clinical Outcomes',
+  'feedback-pulse': 'Feedback Pulse',
+  'audio-vault': 'Audio Vault',
+  'price-indexation': 'Price Indexation',
+  'disaster-recovery': 'Backup Vault'
 };
 
 const STORAGE_KEY = 'breakthrough_session_timer_state_v1';
