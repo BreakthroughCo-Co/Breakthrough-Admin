@@ -59,7 +59,11 @@ const MODULE_TITLES: Record<TabType, string> = {
   'bigquery-analytics': 'BigQuery Enterprise Analytics & Streaming Hub',
   'clinical-benchmarks': 'National NDIA Clinical Efficacy Benchmark Matrix',
   'carer-family-hub': 'Carer Delegation & Multi-Participant Family Hub',
-  'gamified-goals': 'Participant Milestone & Gamified Goal Tracker'
+  'gamified-goals': 'Participant Milestone & Gamified Goal Tracker',
+  'lone-worker-safety': 'Lone Worker Field Safety & SOS Emergency Beacon',
+  'travel-allowance': 'Modified Monash Model (MMM) Travel Calculator',
+  'crisis-escalation': 'Multi-Channel Crisis & Safeguards Escalation Dispatcher',
+  'credential-vault': 'Practitioner Credential & NDIS Worker Screening Vault'
 };
 
 export const ModuleExportModal: React.FC<ModuleExportModalProps> = ({

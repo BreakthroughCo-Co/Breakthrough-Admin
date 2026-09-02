@@ -53,7 +53,11 @@ const TAB_NAME_MAP: Record<TabType, string> = {
   'bigquery-analytics': 'BigQuery Analytics',
   'clinical-benchmarks': 'NDIA Benchmarks',
   'carer-family-hub': 'Carer & Family Hub',
-  'gamified-goals': 'Milestone Rewards'
+  'gamified-goals': 'Milestone Rewards',
+  'lone-worker-safety': 'Lone Worker Field SOS',
+  'travel-allowance': 'MMM Travel Calculator',
+  'crisis-escalation': 'Crisis Escalation Hub',
+  'credential-vault': 'Worker Screening Vault'
 };
 
 const STORAGE_KEY = 'breakthrough_session_timer_state_v1';

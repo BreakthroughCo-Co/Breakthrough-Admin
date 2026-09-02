@@ -30,6 +30,9 @@ import {
   UserX,
   Database,
   Trophy,
+  Radio,
+  Car,
+  BellRing,
   X
 } from 'lucide-react';
 
@@ -66,8 +69,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
       title: 'Operations & Control',
       items: [
         { id: 'command-center', label: 'Command Center', icon: LayoutDashboard },
+        { id: 'lone-worker-safety', label: 'Lone Worker Field SOS', icon: Radio, badge: 'SOS', highlight: true },
         { id: 'telehealth', label: 'Telehealth Consults', icon: Video, badge: 'WEBRTC', highlight: true },
         { id: 'voice-scribe', label: 'Clinical Voice Scribe', icon: Sparkles, badge: 'SPEECH', highlight: true },
+        { id: 'travel-allowance', label: 'MMM Travel Calculator', icon: Car, badge: 'MMM 1-7' },
         { id: 'participant-portal', label: 'Participant & Carer Portal', icon: HeartHandshake, badge: 'PORTAL' },
         { id: 'carer-family-hub', label: 'Carer & Family Hub', icon: HeartHandshake, badge: 'FAMILY' },
         { id: 'gamified-goals', label: 'Milestone Rewards', icon: Trophy, badge: 'GAS +2' },
@@ -81,6 +86,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
     {
       title: 'Clinical Practice & BSP',
       items: [
+        { id: 'crisis-escalation', label: 'Crisis Escalation Hub', icon: BellRing, badge: '24HR', highlight: true },
         { id: 'clinical-supervisor', label: 'Clinical Supervisor', icon: Award, badge: 'AUDITOR', highlight: true },
         { id: 'clinical-benchmarks', label: 'NDIA Benchmarks', icon: Award, badge: 'SECTOR' },
         { id: 'plan-report-writer', label: 'Plan Reassessment Writer', icon: FileText, badge: 'REPORT', highlight: true },
@@ -96,6 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
     {
       title: 'Business & Governance',
       items: [
+        { id: 'credential-vault', label: 'Worker Screening (NWSC)', icon: Award, badge: 'NWSC', adminOnly: true },
         { id: 'bigquery-analytics', label: 'BigQuery Warehouse', icon: Database, badge: 'DW', adminOnly: true, highlight: true },
         { id: 'proda-gateway', label: 'PRODA Direct Gateway', icon: Send, badge: 'B2G', adminOnly: true, highlight: true },
         { id: 'agreements-signing', label: 'E-Signature Portal', icon: FileSignature, badge: 'SHA-256' },
