@@ -57,7 +57,11 @@ const TAB_NAME_MAP: Record<TabType, string> = {
   'lone-worker-safety': 'Lone Worker Field SOS',
   'travel-allowance': 'MMM Travel Calculator',
   'crisis-escalation': 'Crisis Escalation Hub',
-  'credential-vault': 'Worker Screening Vault'
+  'credential-vault': 'Worker Screening Vault',
+  'annual-compliance-return': 'NDIS Annual Return',
+  'dynamic-assessments': 'Clinical Form Builder',
+  'rp-fading-simulator': 'RP Fading Simulator',
+  'schads-fatigue': 'SCHADS Fatigue Radar'
 };
 
 const STORAGE_KEY = 'breakthrough_session_timer_state_v1';

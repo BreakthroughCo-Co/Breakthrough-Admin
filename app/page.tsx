@@ -57,6 +57,10 @@ const LoneWorkerSafetyHub = lazy(() => import('@/components/features/LoneWorkerS
 const TravelAllowanceModule = lazy(() => import('@/components/features/TravelAllowanceModule').then(m => ({ default: m.TravelAllowanceModule })));
 const CrisisEscalationHub = lazy(() => import('@/components/features/CrisisEscalationHub').then(m => ({ default: m.CrisisEscalationHub })));
 const PractitionerCredentialVault = lazy(() => import('@/components/features/PractitionerCredentialVault').then(m => ({ default: m.PractitionerCredentialVault })));
+const AnnualComplianceReturnModule = lazy(() => import('@/components/features/AnnualComplianceReturnModule').then(m => ({ default: m.AnnualComplianceReturnModule })));
+const DynamicFormBuilderModule = lazy(() => import('@/components/features/DynamicFormBuilderModule').then(m => ({ default: m.DynamicFormBuilderModule })));
+const RestrictivePracticeFadingSimulator = lazy(() => import('@/components/features/RestrictivePracticeFadingSimulator').then(m => ({ default: m.RestrictivePracticeFadingSimulator })));
+const SCHADSFatiguePredictorModule = lazy(() => import('@/components/features/SCHADSFatiguePredictorModule').then(m => ({ default: m.SCHADSFatiguePredictorModule })));
 
 const ModuleLoadingFallback = ({ title }: { title: string }) => (
   <div className="flex flex-col items-center justify-center min-h-[360px] py-16 space-y-4 rounded-2xl bg-slate-900/30 border border-slate-800/50">
@@ -331,6 +335,22 @@ export default function Page() {
         return (
           <AccessGuard requiredRoles={['ADMIN']} moduleName="Worker Screening Vault">
             <PractitionerCredentialVault />
+          </AccessGuard>
+        );
+      case 'annual-compliance-return':
+        return (
+          <AccessGuard requiredRoles={['ADMIN']} moduleName="Annual Compliance Return">
+            <AnnualComplianceReturnModule />
+          </AccessGuard>
+        );
+      case 'dynamic-assessments':
+        return <DynamicFormBuilderModule />;
+      case 'rp-fading-simulator':
+        return <RestrictivePracticeFadingSimulator />;
+      case 'schads-fatigue':
+        return (
+          <AccessGuard requiredRoles={['ADMIN']} moduleName="SCHADS Fatigue Predictor">
+            <SCHADSFatiguePredictorModule />
           </AccessGuard>
         );
       default:

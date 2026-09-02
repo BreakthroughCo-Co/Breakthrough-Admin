@@ -63,7 +63,11 @@ const MODULE_TITLES: Record<TabType, string> = {
   'lone-worker-safety': 'Lone Worker Field Safety & SOS Emergency Beacon',
   'travel-allowance': 'Modified Monash Model (MMM) Travel Calculator',
   'crisis-escalation': 'Multi-Channel Crisis & Safeguards Escalation Dispatcher',
-  'credential-vault': 'Practitioner Credential & NDIS Worker Screening Vault'
+  'credential-vault': 'Practitioner Credential & NDIS Worker Screening Vault',
+  'annual-compliance-return': 'NDIS Commission Annual Compliance Return (ACR)',
+  'dynamic-assessments': 'Clinical Assessment & Dynamic Form Builder',
+  'rp-fading-simulator': 'Restrictive Practice Fading Protocol Simulator',
+  'schads-fatigue': 'SCHADS Award Overtime & Fatigue Compliance Predictor'
 };
 
 export const ModuleExportModal: React.FC<ModuleExportModalProps> = ({

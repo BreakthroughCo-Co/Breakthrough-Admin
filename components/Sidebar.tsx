@@ -33,6 +33,10 @@ import {
   Radio,
   Car,
   BellRing,
+  FileCheck2,
+  ClipboardList,
+  TrendingDown,
+  Activity,
   X
 } from 'lucide-react';
 
@@ -90,6 +94,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         { id: 'clinical-supervisor', label: 'Clinical Supervisor', icon: Award, badge: 'AUDITOR', highlight: true },
         { id: 'clinical-benchmarks', label: 'NDIA Benchmarks', icon: Award, badge: 'SECTOR' },
         { id: 'plan-report-writer', label: 'Plan Reassessment Writer', icon: FileText, badge: 'REPORT', highlight: true },
+        { id: 'dynamic-assessments', label: 'Clinical Forms & FCA', icon: ClipboardList, badge: 'FCA' },
+        { id: 'rp-fading-simulator', label: 'RP Fading Simulator', icon: TrendingDown, badge: 'STEP-DOWN' },
         { id: 'document-intelligence', label: 'Document Intelligence', icon: BrainCircuit, badge: 'OCR', highlight: true },
         { id: 'ai-radar', label: 'Caseload Risk Radar', icon: BrainCircuit, badge: 'RADAR' },
         { id: 'churn-radar', label: 'Retention & Churn Radar', icon: UserX, badge: 'ML' },
@@ -102,7 +108,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
     {
       title: 'Business & Governance',
       items: [
+        { id: 'annual-compliance-return', label: 'NDIS Annual Return', icon: FileCheck2, badge: '73ZM', adminOnly: true, highlight: true },
         { id: 'credential-vault', label: 'Worker Screening (NWSC)', icon: Award, badge: 'NWSC', adminOnly: true },
+        { id: 'schads-fatigue', label: 'SCHADS Fatigue & Overtime', icon: Activity, badge: 'AWARD', adminOnly: true },
         { id: 'bigquery-analytics', label: 'BigQuery Warehouse', icon: Database, badge: 'DW', adminOnly: true, highlight: true },
         { id: 'proda-gateway', label: 'PRODA Direct Gateway', icon: Send, badge: 'B2G', adminOnly: true, highlight: true },
         { id: 'agreements-signing', label: 'E-Signature Portal', icon: FileSignature, badge: 'SHA-256' },
