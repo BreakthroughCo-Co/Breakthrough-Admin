@@ -61,7 +61,12 @@ const TAB_NAME_MAP: Record<TabType, string> = {
   'annual-compliance-return': 'NDIS Annual Return',
   'dynamic-assessments': 'Clinical Form Builder',
   'rp-fading-simulator': 'RP Fading Simulator',
-  'schads-fatigue': 'SCHADS Fatigue Radar'
+  'schads-fatigue': 'SCHADS Fatigue Radar',
+  'clinical-copilot': 'Clinical Copilot',
+  'sensory-audit': 'Sensory Audit',
+  'peer-supervision': 'Supervision Log',
+  'fhir-gateway': 'FHIR Interop Hub',
+  'budget-forecaster': 'Plan Forecaster'
 };
 
 const STORAGE_KEY = 'breakthrough_session_timer_state_v1';

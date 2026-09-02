@@ -37,6 +37,11 @@ import {
   ClipboardList,
   TrendingDown,
   Activity,
+  Network,
+  LineChart,
+  Users2,
+  Home,
+  Zap,
   X
 } from 'lucide-react';
 
@@ -73,6 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
       title: 'Operations & Control',
       items: [
         { id: 'command-center', label: 'Command Center', icon: LayoutDashboard },
+        { id: 'clinical-copilot', label: 'Clinical Copilot & Prompts', icon: Zap, badge: 'AI', highlight: true },
         { id: 'lone-worker-safety', label: 'Lone Worker Field SOS', icon: Radio, badge: 'SOS', highlight: true },
         { id: 'telehealth', label: 'Telehealth Consults', icon: Video, badge: 'WEBRTC', highlight: true },
         { id: 'voice-scribe', label: 'Clinical Voice Scribe', icon: Sparkles, badge: 'SPEECH', highlight: true },
@@ -80,6 +86,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         { id: 'participant-portal', label: 'Participant & Carer Portal', icon: HeartHandshake, badge: 'PORTAL' },
         { id: 'carer-family-hub', label: 'Carer & Family Hub', icon: HeartHandshake, badge: 'FAMILY' },
         { id: 'gamified-goals', label: 'Milestone Rewards', icon: Trophy, badge: 'GAS +2' },
+        { id: 'peer-supervision', label: 'Peer Supervision Logs', icon: Users2, badge: 'AHPRA' },
         { id: 'clients', label: 'NDIS Participants', icon: Users },
         { id: 'ndis-goals', label: 'NDIS Goal Tracker', icon: Target, badge: 'NEW' },
         { id: 'google-maps', label: 'Google Maps Routing', icon: MapPin, badge: 'MMM' },
@@ -96,6 +103,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         { id: 'plan-report-writer', label: 'Plan Reassessment Writer', icon: FileText, badge: 'REPORT', highlight: true },
         { id: 'dynamic-assessments', label: 'Clinical Forms & FCA', icon: ClipboardList, badge: 'FCA' },
         { id: 'rp-fading-simulator', label: 'RP Fading Simulator', icon: TrendingDown, badge: 'STEP-DOWN' },
+        { id: 'sensory-audit', label: 'Sensory Environment Audit', icon: Home, badge: 'CAPITAL' },
         { id: 'document-intelligence', label: 'Document Intelligence', icon: BrainCircuit, badge: 'OCR', highlight: true },
         { id: 'ai-radar', label: 'Caseload Risk Radar', icon: BrainCircuit, badge: 'RADAR' },
         { id: 'churn-radar', label: 'Retention & Churn Radar', icon: UserX, badge: 'ML' },
@@ -111,6 +119,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         { id: 'annual-compliance-return', label: 'NDIS Annual Return', icon: FileCheck2, badge: '73ZM', adminOnly: true, highlight: true },
         { id: 'credential-vault', label: 'Worker Screening (NWSC)', icon: Award, badge: 'NWSC', adminOnly: true },
         { id: 'schads-fatigue', label: 'SCHADS Fatigue & Overtime', icon: Activity, badge: 'AWARD', adminOnly: true },
+        { id: 'budget-forecaster', label: 'Plan Budget Forecaster', icon: LineChart, badge: 'FORECAST' },
+        { id: 'fhir-gateway', label: 'HL7 FHIR Interop Hub', icon: Network, badge: 'FHIR R4', adminOnly: true },
         { id: 'bigquery-analytics', label: 'BigQuery Warehouse', icon: Database, badge: 'DW', adminOnly: true, highlight: true },
         { id: 'proda-gateway', label: 'PRODA Direct Gateway', icon: Send, badge: 'B2G', adminOnly: true, highlight: true },
         { id: 'agreements-signing', label: 'E-Signature Portal', icon: FileSignature, badge: 'SHA-256' },

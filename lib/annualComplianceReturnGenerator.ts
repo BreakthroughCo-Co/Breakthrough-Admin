@@ -33,7 +33,7 @@ export class AnnualComplianceReturnGenerator {
     restrictivePractices: RestrictivePractice[]
   ): AnnualComplianceReturn {
     const validScreenings = practitioners.filter(
-      (p) => p.screeningStatus === 'CLEAR' || (p.screeningExpiryDate && new Date(p.screeningExpiryDate) > new Date())
+      (p) => p.screeningStatus === 'Valid' || p.screeningStatus === 'Active' || (p.screeningExpiryDate && new Date(p.screeningExpiryDate) > new Date())
     ).length;
 
     const screeningRate = practitioners.length > 0 ? (validScreenings / practitioners.length) * 100 : 100;

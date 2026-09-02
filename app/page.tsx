@@ -61,6 +61,11 @@ const AnnualComplianceReturnModule = lazy(() => import('@/components/features/An
 const DynamicFormBuilderModule = lazy(() => import('@/components/features/DynamicFormBuilderModule').then(m => ({ default: m.DynamicFormBuilderModule })));
 const RestrictivePracticeFadingSimulator = lazy(() => import('@/components/features/RestrictivePracticeFadingSimulator').then(m => ({ default: m.RestrictivePracticeFadingSimulator })));
 const SCHADSFatiguePredictorModule = lazy(() => import('@/components/features/SCHADSFatiguePredictorModule').then(m => ({ default: m.SCHADSFatiguePredictorModule })));
+const ClinicalCopilotAssistant = lazy(() => import('@/components/features/ClinicalCopilotAssistant').then(m => ({ default: m.ClinicalCopilotAssistant })));
+const SensoryEnvironmentAnalyzerModule = lazy(() => import('@/components/features/SensoryEnvironmentAnalyzerModule').then(m => ({ default: m.SensoryEnvironmentAnalyzerModule })));
+const PeerSupervisionNetworkModule = lazy(() => import('@/components/features/PeerSupervisionNetworkModule').then(m => ({ default: m.PeerSupervisionNetworkModule })));
+const FHIRGatewayModule = lazy(() => import('@/components/features/FHIRGatewayModule').then(m => ({ default: m.FHIRGatewayModule })));
+const BudgetRolloverForecasterModule = lazy(() => import('@/components/features/BudgetRolloverForecasterModule').then(m => ({ default: m.BudgetRolloverForecasterModule })));
 
 const ModuleLoadingFallback = ({ title }: { title: string }) => (
   <div className="flex flex-col items-center justify-center min-h-[360px] py-16 space-y-4 rounded-2xl bg-slate-900/30 border border-slate-800/50">
@@ -353,6 +358,20 @@ export default function Page() {
             <SCHADSFatiguePredictorModule />
           </AccessGuard>
         );
+      case 'clinical-copilot':
+        return <ClinicalCopilotAssistant />;
+      case 'sensory-audit':
+        return <SensoryEnvironmentAnalyzerModule />;
+      case 'peer-supervision':
+        return <PeerSupervisionNetworkModule />;
+      case 'fhir-gateway':
+        return (
+          <AccessGuard requiredRoles={['ADMIN']} moduleName="HL7 FHIR Interoperability">
+            <FHIRGatewayModule />
+          </AccessGuard>
+        );
+      case 'budget-forecaster':
+        return <BudgetRolloverForecasterModule />;
       default:
         if (currentUser?.role === 'PARTICIPANT') {
           return <ParticipantPortalView />;

@@ -67,7 +67,12 @@ const MODULE_TITLES: Record<TabType, string> = {
   'annual-compliance-return': 'NDIS Commission Annual Compliance Return (ACR)',
   'dynamic-assessments': 'Clinical Assessment & Dynamic Form Builder',
   'rp-fading-simulator': 'Restrictive Practice Fading Protocol Simulator',
-  'schads-fatigue': 'SCHADS Award Overtime & Fatigue Compliance Predictor'
+  'schads-fatigue': 'SCHADS Award Overtime & Fatigue Compliance Predictor',
+  'clinical-copilot': 'Autonomous Clinical Copilot & AI Smart Prompts',
+  'sensory-audit': 'Sensory Environment & Home Modification Audit',
+  'peer-supervision': 'Practitioner Peer Supervision & Reflective Practice',
+  'fhir-gateway': 'HL7 FHIR R4 Healthcare Interoperability Gateway',
+  'budget-forecaster': 'Multi-Year Plan Budget Burn & Rollover Forecaster'
 };
 
 export const ModuleExportModal: React.FC<ModuleExportModalProps> = ({
